@@ -1,9 +1,13 @@
-// [Requirement 10: Hooks & Context API]
-// [Requirement 4: Fetch API]
-// [Requirement 5: Error Handling]
-// frontend/src/context/ClinicContext.jsx
+// ==============================================================================
+// MediTrack Clinic Context & State Management
+// [Requirement 1: Real JWT Handling, Expiry Interception, & Clean Session Storage]
+// [Requirement 2 & 3: Role-Aware Queries & Public Queue Privacy Consumption]
+// [Requirement 4: Pure Native Fetch API with Async/Await]
+// [Requirement 5: Visible UI Alerts & Error Handling]
+// [Requirement 10: Hooks & Context API with Multilingual Support]
+// ==============================================================================
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 
 export const ClinicContext = createContext();
 
@@ -56,7 +60,9 @@ const translations = {
     enterTemp: 'Temperature (95°F - 108°F)',
     describeSymptoms: 'Describe primary symptoms (e.g., Chest pain, fever...)',
     generateToken: 'Generate Smart Token',
-    triageExplanation: 'Automated Smart Triage evaluates age, vitals & symptoms to prioritize urgent patients.',
+    triageExplanation: 'Educational Decision Support: Algorithmic triage predicts urgency for queue sequencing. Not a medical diagnosis.',
+    emergencyWarningTitle: 'Emergency Medical Advice',
+    emergencyNotice: 'If experiencing severe chest pain, acute respiratory distress, or stroke symptoms, call emergency medical services (112 / 102) immediately.',
     prescriptionPad: 'Digital Prescription Pad',
     diagnosis: 'Diagnosis / Assessment',
     medicine: 'Medicine Name',
@@ -66,12 +72,12 @@ const translations = {
     clinicalNotes: 'Special Advice / Doctor Notes',
     saveAndPrint: 'Save & Print Digital Prescription',
     staffLoginTitle: 'Clinic Staff Authentication',
-    enterPin: 'Enter 4-Digit Security PIN',
+    enterPin: 'Enter Security PIN or Password',
     selectRole: 'Select Staff Role',
     receptionRole: 'Receptionist / Front Desk',
     doctorRole: 'Consulting Physician / Doctor',
-    signIn: 'Verify PIN & Sign In',
-    demoPinHint: 'Evaluation Demo PIN: 1234',
+    signIn: 'Verify & Sign In',
+    demoPinHint: 'Staff PIN: 1234 (Bcrypt verified)',
   },
   hi: {
     brand: 'मेडीट्रैक',
@@ -120,7 +126,9 @@ const translations = {
     enterTemp: 'तापमान (95°F - 108°F)',
     describeSymptoms: 'लक्षणों का विवरण दें (उदा. सीने में दर्द, बुखार...)',
     generateToken: 'स्मार्ट टोकन जारी करें',
-    triageExplanation: 'स्मार्ट ट्रायज इंजन आयु, बुखार और लक्षणों के आधार पर प्राथमिकता तय करता है।',
+    triageExplanation: 'शैक्षणिक निर्णय-सहायता: एल्गोरिदम कतार क्रमबद्धता हेतु प्राथमिकता तय करता है। यह रोग निदान नहीं है।',
+    emergencyWarningTitle: 'आपातकालीन चिकित्सकीय सलाह',
+    emergencyNotice: 'यदि मरीज को सीने में तेज दर्द, सांस लेने में अत्यधिक तकलीफ या बेहोशी हो, तो अविलंब आपातकालीन सेवा (112 / 102) पर संपर्क करें।',
     prescriptionPad: 'डिजिटल डॉक्टर पर्चा',
     diagnosis: 'रोग निदान (Diagnosis)',
     medicine: 'दवा का नाम',
@@ -130,12 +138,12 @@ const translations = {
     clinicalNotes: 'विशेष परामर्श / निर्देश',
     saveAndPrint: 'पर्चा सहेजें और प्रिंट करें',
     staffLoginTitle: 'क्लिनिक स्टाफ प्रमाणीकरण',
-    enterPin: '4-अंकों का सुरक्षा पिन दर्ज करें',
+    enterPin: 'सुरक्षा पिन दर्ज करें',
     selectRole: 'स्टाफ पद चुनें',
     receptionRole: 'रिसेप्शनिस्ट / फ्रंट डेस्क',
     doctorRole: 'चिकित्सक / डॉक्टर',
-    signIn: 'पिन सत्यापित करें एवं लॉगिन करें',
-    demoPinHint: 'डेमो पिन: 1234',
+    signIn: 'प्रमाणीकृत करें एवं लॉगिन करें',
+    demoPinHint: 'स्टाफ पिन: 1234',
   },
   pa: {
     brand: 'ਮੈਡੀਟਰੈਕ',
@@ -184,7 +192,9 @@ const translations = {
     enterTemp: 'ਤਾਪਮਾਨ (95°F - 108°F)',
     describeSymptoms: 'ਬਿਮਾਰੀ ਦੇ ਲੱਛਣ ਦੱਸੋ (ਜਿਵੇਂ ਛਾਤੀ ਵਿੱਚ ਦਰਦ, ਬੁਖ਼ਾਰ)',
     generateToken: 'ਸਮਾਰਟ ਟੋਕਨ ਜਾਰੀ ਕਰੋ',
-    triageExplanation: 'ਸਮਾਰਟ ਟ੍ਰਾਈਏਜ ਉਮਰ ਅਤੇ ਲੱਛਣਾਂ ਅਨੁਸਾਰ ਤਰਜੀਹ ਤੈਅ ਕਰਦਾ ਹੈ।',
+    triageExplanation: 'ਸਿੱਖਿਆਤਮਕ ਫੈਸਲਾ-ਸਹਾਇਤਾ: ਐਲਗੋਰਿਦਮ ਕਤਾਰ ਤਰਜੀਹ ਨਿਰਧਾਰਤ ਕਰਦਾ ਹੈ। ਇਹ ਡਾਕਟਰੀ ਨਿਦਾਨ ਨਹੀਂ ਹੈ।',
+    emergencyWarningTitle: 'ਐਮਰਜੈਂਸੀ ਡਾਕਟਰੀ ਚਿਤਾਵਨੀ',
+    emergencyNotice: 'ਜੇਕਰ ਛਾਤੀ ਵਿੱਚ ਗੰਭੀਰ ਦਰਦ ਜਾਂ ਸਾਹ ਲੈਣ ਵਿੱਚ ਬਹੁਤ ਤਕਲੀਫ਼ ਹੋਵੇ, ਤਾਂ ਤੁਰੰਤ ਐਮਰਜੈਂਸੀ ਸੇਵਾ (112 / 102) ਨਾਲ ਸੰਪਰਕ ਕਰੋ।',
     prescriptionPad: 'ਡਿਜੀਟਲ ਡਾਕਟਰੀ ਪਰਚੀ',
     diagnosis: 'ਬਿਮਾਰੀ ਦੀ ਜਾਂਚ',
     medicine: 'ਦਵਾਈ ਦਾ ਨਾਮ',
@@ -194,35 +204,40 @@ const translations = {
     clinicalNotes: 'ਵਿਸ਼ੇਸ਼ ਸਲਾਹ / ਨੋਟਸ',
     saveAndPrint: 'ਪਰਚੀ ਸੰਭਾਲੋ ਅਤੇ ਪ੍ਰਿੰਟ ਕਰੋ',
     staffLoginTitle: 'ਕਲੀਨਿਕ ਸਟਾਫ ਪ੍ਰਮਾਣੀਕਰਨ',
-    enterPin: '4-ਅੰਕਾਂ ਦਾ ਸੁਰੱਖਿਆ ਪਿੰਨ ਦਰਜ ਕਰੋ',
+    enterPin: 'ਸੁਰੱਖਿਆ ਪਿੰਨ ਦਰਜ ਕਰੋ',
     selectRole: 'ਭੂਮਿਕਾ ਚੁਣੋ',
     receptionRole: 'ਰਿਸੈਪਸ਼ਨਿਸਟ',
     doctorRole: 'ਮਾਹਿਰ ਡਾਕਟਰ',
     signIn: 'ਲੌਗਇਨ ਕਰੋ',
-    demoPinHint: 'ਡੈਮੋ ਪਿੰਨ: 1234',
+    demoPinHint: 'ਸਟਾਫ ਪਿੰਨ: 1234',
   },
 };
 
-// Robust API endpoint resolution: prefers relative /api for Vite proxy and production
 const BASE_URL = '/api';
 
 export const ClinicProvider = ({ children }) => {
-  // [Requirement 10: State Hooks]
   const [language, setLanguage] = useState('en');
   const [patients, setPatients] = useState([]);
+  const [publicQueue, setPublicQueue] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [systemStatus, setSystemStatus] = useState(null);
+
+  // Authenticated Staff Profile & JWT Token
   const [staffUser, setStaffUser] = useState(() => {
-    const saved = localStorage.getItem('meditrack_staff');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('meditrack_staff');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
 
-  // Multilingual helper string lookup
   const t = translations[language] || translations.en;
 
-  // Auto-dismiss banners after 5 seconds
+  // Auto-dismiss alert notifications
   useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => setSuccessMessage(null), 5000);
@@ -237,33 +252,81 @@ export const ClinicProvider = ({ children }) => {
     }
   }, [error]);
 
-  // [Requirement 4: Fetch API with async/await and native fetch()]
-  // [Requirement 5: try/catch Error Handling]
-  const fetchPatients = async () => {
-    setLoading(true);
-    setError(null);
+  // Handle Token Expiry & Automatic Sign-out
+  const handleAuthExpiry = useCallback(() => {
+    setStaffUser(null);
+    localStorage.removeItem('meditrack_staff');
+    setError('Your session has expired or is invalid. Please sign in again.');
+  }, []);
+
+  // Fetch Public Live Queue (No auth, privacy-preserving)
+  const fetchPublicQueue = useCallback(async () => {
     try {
-      const response = await fetch(`${BASE_URL}/patients`);
-      if (!response.ok) {
-        throw new Error(`Server returned HTTP ${response.status}: Failed to fetch patients`);
+      const response = await fetch(`${BASE_URL}/patients/public-queue`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setPublicQueue(result.data);
+        }
       }
+    } catch (err) {
+      console.warn('Public queue fetch warning:', err.message);
+    }
+  }, []);
+
+  // Fetch Full Patients Roster (Staff JWT Protected)
+  const fetchPatients = useCallback(async () => {
+    if (!staffUser || !staffUser.token) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${BASE_URL}/patients`, {
+        headers: {
+          'Authorization': `Bearer ${staffUser.token}`,
+        },
+      });
+
+      if (response.status === 401) {
+        handleAuthExpiry();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Server returned HTTP ${response.status}`);
+      }
+
       const result = await response.json();
       if (result.success) {
         setPatients(result.data);
-      } else {
-        throw new Error(result.message || 'Unable to retrieve patient queue');
       }
     } catch (err) {
       console.error('[Requirement 5: Frontend Error Handling]', err);
-      setError(err.message || 'Network connection error while reaching MediTrack server');
+      setError(err.message || 'Error fetching staff patient list.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [staffUser, handleAuthExpiry]);
 
-  const fetchPrescriptions = async () => {
+  // Fetch Prescriptions (Staff JWT Protected)
+  const fetchPrescriptions = useCallback(async () => {
+    if (!staffUser || !staffUser.token) {
+      return;
+    }
+
     try {
-      const response = await fetch(`${BASE_URL}/prescriptions`);
+      const response = await fetch(`${BASE_URL}/prescriptions`, {
+        headers: {
+          'Authorization': `Bearer ${staffUser.token}`,
+        },
+      });
+
+      if (response.status === 401) {
+        handleAuthExpiry();
+        return;
+      }
+
       if (response.ok) {
         const result = await response.json();
         if (result.success) setPrescriptions(result.data);
@@ -271,21 +334,42 @@ export const ClinicProvider = ({ children }) => {
     } catch (err) {
       console.warn('Prescriptions fetch warning:', err.message);
     }
-  };
+  }, [staffUser, handleAuthExpiry]);
 
-  // Initial load and periodic synchronization every 12 seconds
+  // Fetch System Diagnostics
+  const fetchStatus = useCallback(async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/status`);
+      if (response.ok) {
+        const result = await response.json();
+        setSystemStatus(result);
+      }
+    } catch {
+      // Ignored for offline tolerance
+    }
+  }, []);
+
+  // Periodic Synchronization
   useEffect(() => {
-    fetchPatients();
-    fetchPrescriptions();
+    fetchPublicQueue();
+    fetchStatus();
+
+    if (staffUser && staffUser.token) {
+      fetchPatients();
+      fetchPrescriptions();
+    }
 
     const interval = setInterval(() => {
-      fetchPatients();
+      fetchPublicQueue();
+      if (staffUser && staffUser.token) {
+        fetchPatients();
+      }
     }, 12000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [staffUser, fetchPublicQueue, fetchPatients, fetchPrescriptions, fetchStatus]);
 
-  // [Requirement 4: Fetch API - Register Patient (POST)]
+  // Book Patient / Generate Smart Token (Public or Reception)
   const bookPatient = async (patientFormData) => {
     setLoading(true);
     setError(null);
@@ -305,9 +389,11 @@ export const ClinicProvider = ({ children }) => {
       }
 
       setSuccessMessage(result.message);
-      // Immediately refresh list
-      await fetchPatients();
-      return { success: true, data: result.data };
+      await fetchPublicQueue();
+      if (staffUser && staffUser.token) {
+        await fetchPatients();
+      }
+      return { success: true, data: result.data, triage: result.triage };
     } catch (err) {
       setError(err.message);
       return { success: false, message: err.message };
@@ -316,17 +402,28 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  // [Requirement 4: Fetch API - Update Patient Status (PUT)]
+  // Update Patient Status (Staff Protected)
   const updatePatientStatus = async (patientId, newStatus) => {
+    if (!staffUser || !staffUser.token) {
+      setError('Staff login required to change patient status.');
+      return false;
+    }
+
     setError(null);
     try {
       const response = await fetch(`${BASE_URL}/patients/${patientId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${staffUser.token}`,
         },
         body: JSON.stringify({ status: newStatus }),
       });
+
+      if (response.status === 401) {
+        handleAuthExpiry();
+        return false;
+      }
 
       const result = await response.json();
 
@@ -336,6 +433,7 @@ export const ClinicProvider = ({ children }) => {
 
       setSuccessMessage(result.message);
       await fetchPatients();
+      await fetchPublicQueue();
       return true;
     } catch (err) {
       setError(err.message);
@@ -343,9 +441,14 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  // [Requirement 4: Fetch API - Delete Patient Record (DELETE)]
+  // Delete Patient Record (Reception Staff Only)
   const deletePatient = async (patientId) => {
-    if (!window.confirm('Are you sure you want to delete this patient record from the queue?')) {
+    if (!staffUser || !staffUser.token) {
+      setError('Staff login required.');
+      return false;
+    }
+
+    if (!window.confirm('Are you sure you want to delete this patient record?')) {
       return false;
     }
 
@@ -353,7 +456,15 @@ export const ClinicProvider = ({ children }) => {
     try {
       const response = await fetch(`${BASE_URL}/patients/${patientId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${staffUser.token}`,
+        },
       });
+
+      if (response.status === 401) {
+        handleAuthExpiry();
+        return false;
+      }
 
       const result = await response.json();
 
@@ -363,6 +474,7 @@ export const ClinicProvider = ({ children }) => {
 
       setSuccessMessage('Patient record successfully removed.');
       await fetchPatients();
+      await fetchPublicQueue();
       return true;
     } catch (err) {
       setError(err.message);
@@ -370,8 +482,13 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  // [Requirement 4: Fetch API - Save Digital Prescription (POST)]
+  // Save Digital Prescription (Doctor Only)
   const savePrescription = async (prescriptionData) => {
+    if (!staffUser || !staffUser.token) {
+      setError('Doctor authentication required.');
+      return { success: false, message: 'Authentication required' };
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -379,9 +496,15 @@ export const ClinicProvider = ({ children }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${staffUser.token}`,
         },
         body: JSON.stringify(prescriptionData),
       });
+
+      if (response.status === 401) {
+        handleAuthExpiry();
+        return { success: false, message: 'Session expired' };
+      }
 
       const result = await response.json();
 
@@ -391,6 +514,7 @@ export const ClinicProvider = ({ children }) => {
 
       setSuccessMessage(result.message);
       await fetchPatients();
+      await fetchPublicQueue();
       await fetchPrescriptions();
       return { success: true, data: result.data };
     } catch (err) {
@@ -401,9 +525,10 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  // [Requirement 4: Fetch API - Staff Login Authentication]
+  // Staff Login (Real JWT & Bcrypt Verification)
   const loginStaff = async (pin, role) => {
     setError(null);
+    setLoading(true);
     try {
       const response = await fetch(`${BASE_URL}/auth/login`, {
         method: 'POST',
@@ -420,8 +545,10 @@ export const ClinicProvider = ({ children }) => {
       }
 
       const userData = {
+        id: result.user.id,
         role: result.user.role,
         name: result.user.name,
+        username: result.user.username,
         token: result.token,
       };
 
@@ -432,24 +559,26 @@ export const ClinicProvider = ({ children }) => {
     } catch (err) {
       setError(err.message);
       return { success: false, message: err.message };
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Staff Logout
+  // Logout
   const logoutStaff = () => {
     setStaffUser(null);
     localStorage.removeItem('meditrack_staff');
     setSuccessMessage('Signed out successfully.');
   };
 
-  // [Requirement 10: useMemo for Performance & Derived KPI Statistics]
+  // Derived KPI Statistics
   const stats = useMemo(() => {
-    const waitingList = patients.filter((p) => p.status === 'Waiting');
-    const inConsultationList = patients.filter((p) => p.status === 'In-Consultation');
-    const completedList = patients.filter((p) => p.status === 'Completed');
+    const listToCount = staffUser ? patients : publicQueue;
+    const waitingList = listToCount.filter((p) => p.status === 'Waiting');
+    const inConsultationList = listToCount.filter((p) => p.status === 'In-Consultation');
+    const completedList = listToCount.filter((p) => p.status === 'Completed');
     const highPriorityList = waitingList.filter((p) => p.priority === 'High');
 
-    // Live estimated wait time: (Waiting count) * 10 mins
     const estimatedWaitTimeMinutes = waitingList.length * 10;
 
     return {
@@ -459,24 +588,27 @@ export const ClinicProvider = ({ children }) => {
       completedToday: completedList.length,
       estimatedWaitTimeMinutes,
     };
-  }, [patients]);
+  }, [staffUser, patients, publicQueue]);
 
   return (
     <ClinicContext.Provider
       value={{
-        patients,
+        patients: staffUser ? patients : publicQueue,
+        publicQueue,
         prescriptions,
         loading,
         error,
         setError,
         successMessage,
         setSuccessMessage,
+        systemStatus,
         staffUser,
         language,
         setLanguage,
         t,
         stats,
         fetchPatients,
+        fetchPublicQueue,
         bookPatient,
         updatePatientStatus,
         deletePatient,
@@ -490,7 +622,6 @@ export const ClinicProvider = ({ children }) => {
   );
 };
 
-// Custom Hook for clean context consumption
 export const useClinic = () => {
   const context = useContext(ClinicContext);
   if (!context) {
@@ -498,4 +629,3 @@ export const useClinic = () => {
   }
   return context;
 };
-

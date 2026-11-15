@@ -2,137 +2,172 @@
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Render-00D1B2?style=for-the-badge&logo=render&logoColor=white)](https://meditrack-m156.onrender.com)
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Nidhi-shakya/MediTrack)
+[![Security](https://img.shields.io/badge/Security-JWT%20%2B%20Bcrypt%20%2B%20RBAC-blue?style=for-the-badge&logo=auth0&logoColor=white)](https://jwt.io/)
+[![Tests](https://img.shields.io/badge/Tests-36%20Passed%20(Jest)-brightgreen?style=for-the-badge&logo=jest&logoColor=white)](https://jestjs.io/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-[![Express](https://img.shields.io/badge/Express-4.19-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
 > **Live Production URL:** [https://meditrack-m156.onrender.com](https://meditrack-m156.onrender.com)  
-> **Demo Staff PIN:** `1234`
+> **Staff Credentials:** PIN `1234` (Bcrypt verified) • Roles: Receptionist (`reception`) & Doctor (`doctor`)
 
 ---
 
 ## 📋 Project Overview
-**MediTrack** is a real-time outpatient department (OPD) queue optimization and digital prescription system designed for clinics and polyclinics. It features an **Automated Smart Triage Engine** that evaluates vitals (temperature, age, symptoms) in real time to prioritize critical patients, a synchronized live queue board, multilingual support (English, Hindi, Punjabi), role-guarded staff terminals, and a print-ready digital prescription pad.
+**MediTrack** is a secure, real-time outpatient department (OPD) queue coordination and digital prescription system designed for modern community clinics and hospitals. It integrates:
+- **Automated Smart Triage Engine:** Calculates patient urgency scores in real time based on vitals, demographics, and clinical red flags, complete with ethical decision-support disclaimers.
+- **Enterprise Security Architecture:** Real JSON Web Token (JWT) authentication with 8-hour expiration, Bcrypt password hashing (10 salt rounds), and strict Role-Based Access Control (RBAC).
+- **Patient Data Privacy Layer:** Protects patient anonymity by masking names (e.g. `Ramesh S.`) and strictly preventing exposure of phone numbers and raw symptoms through public queue feeds.
+- **Dual Storage Engine:** Seamless connection to MongoDB Atlas with an automated in-memory failover fallback ensuring 100% demo uptime.
+- **Digital Prescription Pad:** Doctor-authenticated Rx pad that automatically transitions patient queue status to `Completed` and generates formatted print slips.
+- **Trilingual Accessibility:** English, हिन्दी (Hindi), and ਪੰਜਾਬੀ (Punjabi) language support.
 
 ---
 
-## 🎯 25-Mark University Evaluation Rubric Compliance
+## 🔒 Security Architecture & Role-Based Access Control (RBAC)
 
-| # | Technical Requirement | Implementation File(s) & Description | Rubric Status |
-|---|---|---|:---:|
-| **1** | **Multiple React Components** | `Navbar`, `StatCard`, `PatientCard`, `BookingForm`, `LiveQueueBoard`, `ProtectedRoute`, `BookingPage`, `LiveQueuePage`, `ReceptionDashboard`, `DoctorPortal`, `LoginPage` | ✅ Complete |
-| **2** | **Responsive Web Design** | Mobile-first layout with Tailwind breakpoints (`sm:`, `md:`, `lg:`, `xl:`), responsive tables, and mobile navigation drawer | ✅ Complete |
-| **3** | **Tailwind CSS** | Medical UI design with triage badges, clinical cards, stat tiles, animated status pills, and printable prescription layout | ✅ Complete |
-| **4** | **Fetch API** | Pure native `fetch()` with `async/await` throughout `ClinicContext.jsx` without Axios dependency | ✅ Complete |
-| **5** | **Error Handling** | Full `try/catch` blocks on Express routes and React frontend with dismissible UI error/success banners | ✅ Complete |
-| **6** | **Props and State** | Props passed down to child components (`PatientCard`, `StatCard`, etc.); local state managed with `useState` | ✅ Complete |
-| **7** | **Conditional Rendering** | Ternary operators (`? :`) and logical `&&` for loading spinners, triage alert badges, role actions, and empty queue states | ✅ Complete |
-| **8** | **React Router & Protected Routes** | `react-router-dom` v6 (`/`, `/queue`, `/login`, and protected `/reception` & `/doctor` via `<ProtectedRoute>`) | ✅ Complete |
-| **9** | **Forms and Form Validation** | Controlled booking & login forms: Name $\ge$ 3 chars, Age 1–120, Phone regex `/^[6-9]\d{9}$/`, Temp 95–108°F, inline red error feedback | ✅ Complete |
-| **10** | **Hooks & Context API** | Global `ClinicContext` (`useContext`, `useState`, `useEffect`, `useMemo`) for auth, queue sync, and trilingual support (EN / HI / PA) | ✅ Complete |
-| **11** | **REST API** | Express modular routes: `GET /api/patients`, `POST /api/patients`, `PUT /api/patients/:id`, `DELETE /api/patients/:id`, `POST /api/prescriptions`, `POST /api/auth/login` | ✅ Complete |
-| **12** | **Environment Variables** | `dotenv` configuration with `.env` and `.env.example` defining `PORT`, `MONGODB_URI`, and `STAFF_PIN` | ✅ Complete |
-| **13** | **MongoDB CRUD** | Full CRUD operations for creating, reading, updating patient status, and deleting records | ✅ Complete |
-| **14** | **MongoDB Atlas & Fallback** | `mongoose.connect(process.env.MONGODB_URI)` + **Smart In-Memory Fallback** with 4 pre-seeded realistic Indian patient records for offline demo resiliency | ✅ Complete |
-| **15** | **Mongoose Schemas** | `models/Patient.js` and `models/Prescription.js` with types, `required`, `enum`, regex, and `timestamps: true` | ✅ Complete |
+### 1. Authentication Layer
+- **Cryptographic Signing:** Industry-standard `jsonwebtoken` (HMAC-SHA256) signed with `JWT_SECRET`.
+- **Credential Storage:** Staff PINs and passwords are never stored in plain text; all credentials are encrypted using `bcryptjs` with 10 salt rounds.
+- **Session Lifecycle:** Tokens expire in 8 hours (`JWT_EXPIRES_IN=8h`). The client context automatically catches `TOKEN_EXPIRED` (HTTP 401), clears storage, and redirects to the sign-in modal.
 
----
+### 2. Authorization Permission Matrix
 
-## ⚡ Real-Time Scenario Features
+| Endpoint | Method | Public | Receptionist | Consulting Doctor | Purpose |
+|---|:---:|:---:|:---:|:---:|---|
+| `/api/patients/public-queue` | `GET` | ✅ Allowed (Masked) | ✅ Allowed | ✅ Allowed | Privacy-safe live queue board |
+| `/api/patients` | `POST` | ✅ Allowed | ✅ Allowed | ✅ Allowed | Register appointment & triage |
+| `/api/auth/login` | `POST` | ✅ Allowed | ✅ Allowed | ✅ Allowed | Bcrypt verify PIN & return JWT |
+| `/api/patients` | `GET` | ❌ 401 Blocked | ✅ Allowed (Full Data) | ✅ Allowed (Full Data) | Full clinical patient roster |
+| `/api/patients/:id` | `PUT` | ❌ 401 Blocked | ✅ Allowed | ✅ Allowed | Advance consultation status |
+| `/api/patients/:id` | `DELETE`| ❌ 401 Blocked | ✅ Allowed | ❌ 403 Forbidden | Remove record from queue |
+| `/api/prescriptions` | `POST` | ❌ 401 Blocked | ❌ 403 Forbidden | ✅ Allowed | Issue official Rx and complete |
+| `/api/prescriptions` | `GET` | ❌ 401 Blocked | ✅ Allowed | ✅ Allowed | Review digital Rx archive |
 
-### 1. Automated Smart Triage Engine
-When a patient books a token, their priority and risk score are computed instantly:
-- 🔴 **High Priority (Red Alert, 85% Risk Score):** Triggered if Age $\ge 65$ OR Temperature $\ge 102^\circ\text{F}$ OR Symptoms include *"Chest Pain"* or *"Breathing Difficulty"*. Placed at the top of the waiting queue.
-- 🟡 **Medium Priority (Urgent, 50% Risk Score):** Triggered if Age $\ge 50$ OR Temperature $\ge 100^\circ\text{F}$.
-- 🟢 **Normal Priority (Routine, 15% Risk Score):** Routine outpatient consultations queued sequentially.
-
-### 2. Live Waiting Time Calculation
-$$\text{Estimated Wait Time} = \text{Patients Ahead in Queue} \times 10\text{ minutes}$$
-
-### 3. Digital Prescription Pad (`/doctor`)
-- Allows physicians to select any patient in line.
-- Dynamic medication list editor with dosage patterns (`1-0-1`, `1-0-0`, `0-0-1`, `1-1-1`, `As Needed`) and durations.
-- Clinical advice, doctor notes, and registration number.
-- Saving automatically transitions the patient's queue status to `Completed`.
-- Generates a print-ready OPD slip with clinic header and signature line.
-
-### 4. Multilingual Context
-Seamlessly toggle the complete interface between:
-- 🇬🇧 **English**
-- 🇮🇳 **हिन्दी (Hindi)**
-- 🇮🇳 **ਪੰਜਾਬੀ (Punjabi)**
+### 3. Patient Data Privacy Enforcement (HIPAA / DISHA Principles)
+- **Public View Isolation:** When unauthenticated patients or waiting room displays access `/api/patients/public-queue`, sensitive fields (`phone`, `symptoms`, clinical notes) are stripped before sending the response.
+- **Name Masking:** Names are obfuscated (e.g. `Ramesh Sharma` $\rightarrow$ `Ramesh S.`).
+- **Data Leak Prevention:** Sanitized error handling middleware masks all internal database exceptions and stack traces from API callers.
 
 ---
 
-## 🛠️ REST API Reference
+## 🧬 Automated Smart Triage & Clinical Decision-Support
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/status` | Server health check and database connection mode |
-| `GET` | `/api/patients` | Retrieve all patients sorted by triage priority and status |
-| `POST` | `/api/patients` | Register new appointment, compute triage, and issue token |
-| `PUT` | `/api/patients/:id` | Update patient status (`Waiting` $\rightarrow$ `In-Consultation` $\rightarrow$ `Completed`) |
-| `DELETE`| `/api/patients/:id` | Remove patient record from clinic queue |
-| `POST` | `/api/prescriptions` | Save prescription and auto-mark patient as completed |
-| `GET` | `/api/prescriptions` | Retrieve prescription history |
-| `POST` | `/api/auth/login` | Authenticate clinic staff via 4-digit PIN |
+### Priority Classification Rules
+- 🔴 **High Priority (Priority 1, 85% Estimated Risk Score):**  
+  Triggered if **Age $\ge 65$** OR **Temperature $\ge 102^\circ\text{F}$** OR **Acute Red-Flag Symptoms** (*severe chest pain, shortness of breath, sudden numbness, loss of consciousness*). Automatically sequenced to the head of the queue.
+- 🟡 **Medium Priority (Priority 2, 50% Estimated Risk Score):**  
+  Triggered if **Age $\ge 50$** OR **Temperature $\ge 100^\circ\text{F}$**.
+- 🟢 **Normal Priority (Priority 3, 15% Estimated Risk Score):**  
+  Standard routine outpatient checkup sequenced sequentially.
+
+### ⚠️ Decision-Support & Medical Safety Disclaimer
+> *"MediTrack Automated Smart Triage is an algorithmic decision-support tool developed strictly for queue prioritization and educational demonstration. It is NOT a clinically validated diagnostic device or medical diagnosis. Attending licensed physicians retain sole clinical responsibility for all patient assessments, triage priority overrides, and medical management. For acute emergency symptoms, patients must contact emergency medical services (112 / 102) immediately."*
 
 ---
 
-## 💻 Local Setup & Execution
+## 🧪 Automated Test Suite (Jest + Supertest)
 
-### Prerequisites
-- Node.js (v18 or higher)
-- npm (v9 or higher)
+The project includes an end-to-end automated testing suite with **36 unit & integration tests** covering authentication, role boundaries, data privacy, patient CRUD, and triage logic.
 
-### Installation
 ```bash
-# Clone the repository
+# Run all automated tests
+cd backend
+npm test
+```
+
+### Test Suite Breakdown:
+1. `tests/auth.test.js`: Verifies JWT issuance, Bcrypt comparison, 401 on incorrect PIN, and `/api/auth/me` session extraction.
+2. `tests/authorization.test.js`: Verifies 401 on missing/expired tokens, 403 when receptionist attempts prescribing, and 403 when doctor attempts deleting patient records.
+3. `tests/privacy_and_patients.test.js`: Verifies public queue strips phone numbers and symptoms, verifies patient registration validation (min 3 chars, Indian phone regex, temperature bounds).
+4. `tests/prescriptions.test.js`: Verifies doctor prescription issuance, input validation, and automatic patient status update to `Completed`.
+5. `tests/triage.test.js`: Verifies all triage algorithmic branches, emergency notices, and legal disclaimers.
+
+```text
+PASS tests/authorization.test.js
+PASS tests/privacy_and_patients.test.js
+PASS tests/auth.test.js
+PASS tests/prescriptions.test.js
+PASS tests/triage.test.js
+
+Test Suites: 5 passed, 5 total
+Tests:       36 passed, 36 total
+Snapshots:   0 total
+Time:        8.479 s
+```
+
+---
+
+## 🛠️ Complete REST API Reference
+
+| Endpoint | Method | Auth Required | Description |
+|---|:---:|:---:|---|
+| `/api/status` | `GET` | No | System health check, database status & security mode |
+| `/api/patients/public-queue` | `GET` | No | Public queue feed with masked names & no personal data |
+| `/api/patients` | `POST` | No | Patient registration & smart token generation |
+| `/api/auth/login` | `POST` | No | Staff authentication returning JWT |
+| `/api/auth/me` | `GET` | JWT | Verified session profile |
+| `/api/patients` | `GET` | JWT (Staff) | Complete patient roster with clinical vitals |
+| `/api/patients/:id` | `PUT` | JWT (Staff) | Advance queue status (`Waiting` $\rightarrow$ `In-Consultation` $\rightarrow$ `Completed`) |
+| `/api/patients/:id` | `DELETE` | JWT (Reception) | Remove patient record |
+| `/api/prescriptions` | `POST` | JWT (Doctor) | Generate digital prescription slip |
+| `/api/prescriptions` | `GET` | JWT (Staff) | Access prescription archive |
+
+---
+
+## ⚙️ Environment Variables
+
+Create a `backend/.env` file based on `.env.example`:
+
+```env
+# Server Network Port
+PORT=5000
+NODE_ENV=production
+
+# JSON Web Token Security
+JWT_SECRET=your_super_secret_jwt_signing_key_here
+JWT_EXPIRES_IN=8h
+
+# MongoDB Atlas Cloud URI (Leave blank to use Smart In-Memory Fallback)
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.yourdomain.mongodb.net/meditrack_db?retryWrites=true&w=majority
+
+# Staff Credentials
+RECEPTION_PIN=1234
+DOCTOR_PIN=1234
+```
+
+---
+
+## 🚀 Quick Start (Local Execution)
+
+```bash
+# 1. Clone repository
 git clone https://github.com/Nidhi-shakya/MediTrack.git
 cd MediTrack
 
-# Install all dependencies (frontend and backend)
+# 2. Install all dependencies
 npm run install:all
 
-# Build frontend production assets
+# 3. Build optimized frontend production bundle
 npm run build
 
-# Start unified server on http://localhost:5000
+# 4. Start unified server on http://localhost:5000
 npm start
 ```
 
 ---
 
-## 🔐 Staff Demo Credentials
-- **PIN:** `1234`
-- **Roles:**
-  - Receptionist (`/reception`)
-  - Consulting Doctor (`/doctor`)
+## 🎓 University Evaluation Checklist (25 Marks)
 
----
-
-## 📂 Repository Structure
-```text
-MediTrack/
-├── backend/
-│   ├── models/
-│   │   ├── Patient.js              # Mongoose Patient Schema
-│   │   └── Prescription.js         # Mongoose Prescription Schema
-│   ├── .env.example                # Sample environment file
-│   ├── package.json
-│   └── server.js                   # Unified Express REST API + Static Server
-├── frontend/
-│   ├── src/
-│   │   ├── components/             # Navbar, PatientCard, StatCard, BookingForm, etc.
-│   │   ├── context/                # ClinicContext (Context API + Fetch API)
-│   │   ├── pages/                  # BookingPage, LiveQueuePage, Reception, Doctor, Login
-│   │   ├── App.jsx                 # React Router v6 configuration
-│   │   └── main.jsx
-│   ├── tailwind.config.js          # Tailwind CSS medical color system
-│   ├── vite.config.js
-│   └── package.json
-├── package.json                    # Root full-stack orchestration
-├── render.yaml                     # Cloud deployment blueprint
-└── README.md
-```
+- [x] **Multiple React Components:** `Navbar`, `StatCard`, `PatientCard`, `BookingForm`, `LiveQueueBoard`, `ProtectedRoute`, `BookingPage`, `DoctorPortal`, `ReceptionDashboard`, `LoginPage`.
+- [x] **Responsive Design:** Mobile-first layout with Tailwind CSS breakpoints (`sm:`, `md:`, `lg:`, `xl:`).
+- [x] **Native Fetch API:** Native `fetch()` with `async/await` throughout; zero Axios dependencies.
+- [x] **Error Handling:** Full `try/catch` on frontend and backend with sanitized JSON errors.
+- [x] **Props and State:** Reusable components driven by props; local and global context state.
+- [x] **Conditional Rendering:** Loading spinners, triage badges, role buttons, empty states.
+- [x] **React Router v6:** Public (`/`, `/queue`, `/login`) and Protected routes (`/reception`, `/doctor`).
+- [x] **Validation:** Name $\ge 3$, Age 1–120, Phone `/^[6-9]\d{9}$/`, Temp 95–108°F with inline red feedback.
+- [x] **Context API & Hooks:** Global `ClinicContext` with JWT session, queue synchronization, and trilingual support.
+- [x] **REST API:** Modular Express router architecture.
+- [x] **Environment Variables:** `.env.example` template with configurable secrets.
+- [x] **MongoDB CRUD & Mongoose Schemas:** Full schema types, validators, and timestamps.
+- [x] **Atlas + In-Memory Fallback:** Reliable cloud connectivity with automated offline fallback.

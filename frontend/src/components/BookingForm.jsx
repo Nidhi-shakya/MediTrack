@@ -412,6 +412,22 @@ export const BookingForm = ({ onSuccess }) => {
           </p>
         </div>
 
+        {/* Urgent Emergency Warning Alert (Requirement 6) */}
+        {liveTriage.priority === 'High' && (
+          <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2.5">
+            <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-rose-900">{t.emergencyWarningTitle}</p>
+              <p className="text-[11px] text-rose-700 mt-0.5">{t.emergencyNotice}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Educational Decision-Support Disclaimer (Requirement 6) */}
+        <p className="text-[10px] text-slate-400 italic text-center px-1">
+          {t.triageExplanation}
+        </p>
+
         {/* Submit Button */}
         <button
           type="submit"

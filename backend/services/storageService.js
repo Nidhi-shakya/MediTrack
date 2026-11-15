@@ -1,0 +1,316 @@
+// ==============================================================================
+// MediTrack Unified Storage Service (MongoDB Atlas + In-Memory Fallback)
+// [Requirement 13 & 14: Dual Storage Engine with Safe Fallback]
+// ==============================================================================
+
+const bcrypt = require('bcryptjs');
+const Patient = require('../models/Patient');
+const Prescription = require('../models/Prescription');
+const Staff = require('../models/Staff');
+const { getDatabaseStatus } = require('../config/db');
+
+// Seed Staff Accounts with bcrypt pre-hashed credentials
+// Pre-computed hash for demo PIN '1234' with 10 salt rounds:
+const DEFAULT_HASH_1234 = bcrypt.hashSync('1234', 10);
+
+const initialStaff = [
+  {
+    _id: 'staff_rec_01',
+    username: 'reception',
+    name: 'Front Desk Receptionist (Counter 1)',
+    role: 'reception',
+    passwordHash: process.env.RECEPTION_PIN
+      ? bcrypt.hashSync(process.env.RECEPTION_PIN, 10)
+      : DEFAULT_HASH_1234,
+    isActive: true,
+  },
+  {
+    _id: 'staff_doc_01',
+    username: 'doctor',
+    name: 'Dr. A. Verma (MBBS, MD - General Medicine)',
+    role: 'doctor',
+    passwordHash: process.env.DOCTOR_PIN
+      ? bcrypt.hashSync(process.env.DOCTOR_PIN, 10)
+      : DEFAULT_HASH_1234,
+    isActive: true,
+  },
+];
+
+// Seed 4 Realistic Indian Patients
+const initialPatients = [
+  {
+    _id: '65f1a101b1c2d3e4f5a00101',
+    tokenNumber: 'T-101',
+    name: 'Ramesh Sharma',
+    age: 68,
+    gender: 'Male',
+    phone: '9876543210',
+    symptoms: 'Severe Chest Pain, Radiating to Left Arm, Breathing Difficulty',
+    temperature: 102.4,
+    priority: 'High',
+    riskScore: 85,
+    status: 'Waiting',
+    prescription: null,
+    createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+  },
+  {
+    _id: '65f1a101b1c2d3e4f5a00102',
+    tokenNumber: 'T-102',
+    name: 'Sunita Patel',
+    age: 54,
+    gender: 'Female',
+    phone: '9823456789',
+    symptoms: 'High Fever, Chills, Body Aches for 3 Days',
+    temperature: 100.8,
+    priority: 'Medium',
+    riskScore: 50,
+    status: 'Waiting',
+    prescription: null,
+    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+  },
+  {
+    _id: '65f1a101b1c2d3e4f5a00103',
+    tokenNumber: 'T-103',
+    name: 'Priya Kaur',
+    age: 32,
+    gender: 'Female',
+    phone: '9899001122',
+    symptoms: 'Routine Antenatal Blood Pressure & Vitamin Review',
+    temperature: 98.6,
+    priority: 'Normal',
+    riskScore: 15,
+    status: 'In-Consultation',
+    prescription: null,
+    createdAt: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
+  },
+  {
+    _id: '65f1a101b1c2d3e4f5a00104',
+    tokenNumber: 'T-104',
+    name: 'Vikram Singh',
+    age: 28,
+    gender: 'Male',
+    phone: '9811223344',
+    symptoms: 'Twisted Right Ankle while playing badminton, localized swelling',
+    temperature: 98.4,
+    priority: 'Normal',
+    riskScore: 15,
+    status: 'Waiting',
+    prescription: null,
+    createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+  },
+];
+
+// Active In-Memory Store
+let inMemoryPatients = JSON.parse(JSON.stringify(initialPatients));
+let inMemoryPrescriptions = [];
+let inMemoryStaff = JSON.parse(JSON.stringify(initialStaff));
+
+// Helper: Mask Patient Name for Public Queue Privacy (Requirement 3)
+// Example: "Ramesh Sharma" -> "Ramesh S."
+const maskPatientName = (fullName) => {
+  if (!fullName) return 'Patient';
+  const parts = fullName.trim().split(' ');
+  if (parts.length === 1) return parts[0];
+  const firstName = parts[0];
+  const lastInitial = parts[parts.length - 1][0] || '';
+  return `${firstName} ${lastInitial}.`;
+};
+
+// Generate Next Token Number sequentially
+const generateNextTokenNumber = async () => {
+  let existingTokens = [];
+  const dbStatus = getDatabaseStatus();
+
+  if (dbStatus.isConnected) {
+    const list = await Patient.find({}, 'tokenNumber').lean();
+    existingTokens = list.map((p) => p.tokenNumber);
+  } else {
+    existingTokens = inMemoryPatients.map((p) => p.tokenNumber);
+  }
+
+  const numbers = existingTokens
+    .map((t) => {
+      const match = (t || '').match(/\d+/);
+      return match ? parseInt(match[0], 10) : 100;
+    })
+    .filter((n) => !isNaN(n));
+
+  const maxNum = numbers.length > 0 ? Math.max(...numbers) : 100;
+  return `T-${maxNum + 1}`;
+};
+
+// Sort Queue according to clinical triage urgency
+const sortQueue = (patients) => {
+  const priorityWeight = { High: 3, Medium: 2, Normal: 1 };
+
+  return [...patients].sort((a, b) => {
+    // 1. In-Consultation first
+    if (a.status === 'In-Consultation' && b.status !== 'In-Consultation') return -1;
+    if (b.status === 'In-Consultation' && a.status !== 'In-Consultation') return 1;
+
+    // 2. Waiting before Completed
+    if (a.status === 'Waiting' && b.status === 'Completed') return -1;
+    if (b.status === 'Waiting' && a.status === 'Completed') return 1;
+
+    // 3. Waiting sorted by Priority (High > Medium > Normal), then FIFO
+    if (a.status === 'Waiting' && b.status === 'Waiting') {
+      const weightA = priorityWeight[a.priority] || 1;
+      const weightB = priorityWeight[b.priority] || 1;
+      if (weightB !== weightA) return weightB - weightA;
+      return new Date(a.createdAt) - new Date(b.createdAt);
+    }
+
+    // 4. Completed sorted reverse chronological
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+};
+
+module.exports = {
+  getPatients: async () => {
+    const dbStatus = getDatabaseStatus();
+    if (dbStatus.isConnected) {
+      const list = await Patient.find().populate('prescription').lean();
+      return sortQueue(list);
+    }
+    return sortQueue(inMemoryPatients);
+  },
+
+  getPatientById: async (id) => {
+    const dbStatus = getDatabaseStatus();
+    if (dbStatus.isConnected) {
+      return Patient.findById(id).populate('prescription');
+    }
+    return inMemoryPatients.find((p) => String(p._id) === String(id)) || null;
+  },
+
+  createPatient: async (patientData) => {
+    const tokenNumber = await generateNextTokenNumber();
+    const dbStatus = getDatabaseStatus();
+
+    if (dbStatus.isConnected) {
+      const newPatient = new Patient({
+        ...patientData,
+        tokenNumber,
+        status: 'Waiting',
+      });
+      return newPatient.save();
+    }
+
+    const newRecord = {
+      _id: 'mem_' + Date.now() + Math.random().toString(36).substr(2, 4),
+      ...patientData,
+      tokenNumber,
+      status: 'Waiting',
+      prescription: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    inMemoryPatients.push(newRecord);
+    return newRecord;
+  },
+
+  updatePatient: async (id, updateFields) => {
+    const dbStatus = getDatabaseStatus();
+    if (dbStatus.isConnected) {
+      return Patient.findByIdAndUpdate(id, updateFields, { new: true });
+    }
+
+    const idx = inMemoryPatients.findIndex((p) => String(p._id) === String(id));
+    if (idx === -1) return null;
+
+    inMemoryPatients[idx] = {
+      ...inMemoryPatients[idx],
+      ...updateFields,
+      updatedAt: new Date().toISOString(),
+    };
+    return inMemoryPatients[idx];
+  },
+
+  deletePatient: async (id) => {
+    const dbStatus = getDatabaseStatus();
+    if (dbStatus.isConnected) {
+      const res = await Patient.findByIdAndDelete(id);
+      return !!res;
+    }
+
+    const initialLen = inMemoryPatients.length;
+    inMemoryPatients = inMemoryPatients.filter((p) => String(p._id) !== String(id));
+    return inMemoryPatients.length < initialLen;
+  },
+
+  createPrescription: async (prescriptionData) => {
+    const dbStatus = getDatabaseStatus();
+
+    if (dbStatus.isConnected) {
+      const newRx = new Prescription(prescriptionData);
+      const savedRx = await newRx.save();
+
+      // Automatically mark patient as Completed & attach prescription
+      await Patient.findByIdAndUpdate(prescriptionData.patientId, {
+        status: 'Completed',
+        prescription: savedRx._id,
+      });
+
+      return savedRx;
+    }
+
+    const newRx = {
+      _id: 'rx_' + Date.now(),
+      ...prescriptionData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    inMemoryPrescriptions.push(newRx);
+
+    // Update patient status to Completed
+    const idx = inMemoryPatients.findIndex(
+      (p) => String(p._id) === String(prescriptionData.patientId)
+    );
+    if (idx !== -1) {
+      inMemoryPatients[idx].status = 'Completed';
+      inMemoryPatients[idx].prescription = newRx;
+      inMemoryPatients[idx].updatedAt = new Date().toISOString();
+    }
+
+    return newRx;
+  },
+
+  getPrescriptions: async () => {
+    const dbStatus = getDatabaseStatus();
+    if (dbStatus.isConnected) {
+      return Prescription.find().sort({ createdAt: -1 }).lean();
+    }
+    return [...inMemoryPrescriptions].reverse();
+  },
+
+  findStaffByUsername: async (username) => {
+    const dbStatus = getDatabaseStatus();
+    const cleanUser = String(username).toLowerCase().trim();
+
+    if (dbStatus.isConnected) {
+      return Staff.findOne({ username: cleanUser, isActive: true });
+    }
+    return inMemoryStaff.find((s) => s.username === cleanUser && s.isActive) || null;
+  },
+
+  findStaffByRole: async (role) => {
+    const dbStatus = getDatabaseStatus();
+    const cleanRole = String(role).toLowerCase().trim();
+
+    if (dbStatus.isConnected) {
+      return Staff.findOne({ role: cleanRole, isActive: true });
+    }
+    return inMemoryStaff.find((s) => s.role === cleanRole && s.isActive) || null;
+  },
+
+  maskPatientName,
+  resetMemoryStoreForTesting: () => {
+    inMemoryPatients = JSON.parse(JSON.stringify(initialPatients));
+    inMemoryPrescriptions = [];
+    inMemoryStaff = JSON.parse(JSON.stringify(initialStaff));
+  },
+};

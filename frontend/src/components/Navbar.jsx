@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 export const Navbar = () => {
-  const { staffUser, logoutStaff, language, setLanguage, t } = useClinic();
+  const { staffUser, logoutStaff, language, setLanguage, systemStatus, t } = useClinic();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -123,6 +123,21 @@ export const Navbar = () => {
 
           {/* Desktop Right Action Bar: Language + Auth */}
           <div className="hidden md:flex items-center gap-3">
+            {/* Database Engine Status Indicator (Requirement 5 & 14) */}
+            {systemStatus && (
+              <span
+                className={`hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                  systemStatus.database?.connected
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                }`}
+                title={systemStatus.database?.description}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${systemStatus.database?.connected ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+                {systemStatus.database?.connected ? 'Atlas Cloud' : 'In-Memory Store'}
+              </span>
+            )}
+
             {/* Language Switcher [English, Hindi, Punjabi] */}
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-semibold">
               <Globe className="w-3.5 h-3.5 text-slate-500 ml-1.5" />
