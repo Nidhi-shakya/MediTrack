@@ -28,6 +28,7 @@ export const ReceptionDashboard = () => {
     patients,
     updatePatientStatus,
     deletePatient,
+    callNextPatient,
     fetchPatients,
     stats,
     loading,
@@ -37,14 +38,9 @@ export const ReceptionDashboard = () => {
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'Waiting' | 'In-Consultation' | 'Completed'
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Call the highest priority next waiting patient into the doctor's cabin
+  // Call the highest priority next waiting patient into the doctor's cabin (Phase 3)
   const handleCallNextPatient = async () => {
-    const nextPatient = patients.find((p) => p.status === 'Waiting');
-    if (!nextPatient) {
-      alert('No waiting patients in queue to call!');
-      return;
-    }
-    await updatePatientStatus(nextPatient._id, 'In-Consultation');
+    await callNextPatient();
   };
 
   const filteredPatients = patients.filter((p) => {

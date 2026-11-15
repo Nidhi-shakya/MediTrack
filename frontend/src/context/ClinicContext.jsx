@@ -8,6 +8,7 @@
 // ==============================================================================
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { io } from 'socket.io-client';
 
 export const ClinicContext = createContext();
 
@@ -158,6 +159,7 @@ export const ClinicProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [systemStatus, setSystemStatus] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Authenticated Staff Profile & JWT Token
   const [staffUser, setStaffUser] = useState(() => {
@@ -283,7 +285,33 @@ export const ClinicProvider = ({ children }) => {
     }
   }, []);
 
-  // Periodic Synchronization
+  // Real-Time Socket.IO Synchronization (Phase 3: Smart Queue Management)
+  useEffect(() => {
+    let socket = null;
+    try {
+      socket = io(window.location.origin, {
+        transports: ['websocket', 'polling'],
+        reconnectionAttempts: 5,
+        reconnectionDelay: 2000,
+      });
+
+      socket.on('queue:updated', () => {
+        fetchPublicQueue();
+        if (staffUser && staffUser.token) {
+          fetchPatients();
+          fetchPrescriptions();
+        }
+      });
+    } catch (e) {
+      console.warn('Socket.IO connection notice:', e.message);
+    }
+
+    return () => {
+      if (socket) socket.disconnect();
+    };
+  }, [staffUser, fetchPublicQueue, fetchPatients, fetchPrescriptions]);
+
+  // Periodic Synchronization (Fallback Polling)
   useEffect(() => {
     fetchPublicQueue();
     fetchStatus();
@@ -298,7 +326,7 @@ export const ClinicProvider = ({ children }) => {
       if (staffUser && staffUser.token) {
         fetchPatients();
       }
-    }, 12000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [staffUser, fetchPublicQueue, fetchPatients, fetchPrescriptions, fetchStatus]);
@@ -416,6 +444,66 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
+  // Call Next Patient (Phase 3: Priority Smart Queue Calling)
+  const callNextPatient = async () => {
+    if (!staffUser || !staffUser.token) {
+      setError('Staff login required.');
+      return { success: false, message: 'Authentication required' };
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${BASE_URL}/patients/call-next`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${staffUser.token}`,
+        },
+      });
+
+      if (response.status === 401) {
+        handleAuthExpiry();
+        return { success: false, message: 'Session expired' };
+      }
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        setSuccessMessage(result.message);
+        await fetchPatients();
+        await fetchPublicQueue();
+        return { success: true, patient: result.data };
+      } else {
+        setError(result.message || 'No patients currently waiting in queue.');
+        return { success: false, message: result.message };
+      }
+    } catch (err) {
+      setError(err.message);
+      return { success: false, message: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch Patient Prescription History (Phase 4)
+  const fetchPrescriptionHistory = async (patientId) => {
+    if (!staffUser || !staffUser.token || !patientId) return [];
+    try {
+      const response = await fetch(`${BASE_URL}/prescriptions/patient/${patientId}`, {
+        headers: {
+          'Authorization': `Bearer ${staffUser.token}`,
+        },
+      });
+      if (response.ok) {
+        const result = await response.json();
+        return result.data || [];
+      }
+    } catch (err) {
+      console.warn('Prescription history lookup warning:', err.message);
+    }
+    return [];
+  };
+
   // Save Digital Prescription (Doctor Only)
   const savePrescription = async (prescriptionData) => {
     if (!staffUser || !staffUser.token) {
@@ -517,17 +605,33 @@ export const ClinicProvider = ({ children }) => {
 
     return {
       totalWaiting: waitingList.length,
+      waitingCount: waitingList.length,
       highPriorityCount: highPriorityList.length,
+      emergencyCount: highPriorityList.length,
       inConsultationCount: inConsultationList.length,
       completedToday: completedList.length,
       estimatedWaitTimeMinutes,
     };
   }, [staffUser, patients, publicQueue]);
 
+  // Client-Side Search Filter for Dashboards (Phase 3 & 6)
+  const filteredPatients = useMemo(() => {
+    const list = staffUser ? patients : publicQueue;
+    if (!searchQuery.trim()) return list;
+    const q = searchQuery.toLowerCase().trim();
+    return list.filter(
+      (p) =>
+        (p.name && p.name.toLowerCase().includes(q)) ||
+        (p.tokenNumber && p.tokenNumber.toLowerCase().includes(q)) ||
+        (p.phone && p.phone.includes(q))
+    );
+  }, [staffUser, patients, publicQueue, searchQuery]);
+
   return (
     <ClinicContext.Provider
       value={{
         patients: staffUser ? patients : publicQueue,
+        filteredPatients,
         publicQueue,
         prescriptions,
         loading,
@@ -539,6 +643,8 @@ export const ClinicProvider = ({ children }) => {
         staffUser,
         language,
         setLanguage,
+        searchQuery,
+        setSearchQuery,
         t,
         stats,
         fetchPatients,
@@ -546,7 +652,9 @@ export const ClinicProvider = ({ children }) => {
         bookPatient,
         updatePatientStatus,
         deletePatient,
+        callNextPatient,
         savePrescription,
+        fetchPrescriptionHistory,
         loginStaff,
         logoutStaff,
       }}

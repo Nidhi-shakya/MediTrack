@@ -2,32 +2,77 @@
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Render-00D1B2?style=for-the-badge&logo=render&logoColor=white)](https://meditrack-m156.onrender.com)
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Nidhi-shakya/MediTrack)
-[![Security](https://img.shields.io/badge/Security-JWT%20%2B%20Bcrypt%20%2B%20RBAC-blue?style=for-the-badge&logo=auth0&logoColor=white)](https://jwt.io/)
-[![Tests](https://img.shields.io/badge/Tests-36%20Passed%20(Jest)-brightgreen?style=for-the-badge&logo=jest&logoColor=white)](https://jestjs.io/)
+[![Security](https://img.shields.io/badge/Security-JWT%20%2B%20Bcrypt%20%2B%20RBAC%20%2B%20RateLimit-blue?style=for-the-badge&logo=auth0&logoColor=white)](https://jwt.io/)
+[![Tests](https://img.shields.io/badge/Tests-41%20Passed%20(Jest)-brightgreen?style=for-the-badge&logo=jest&logoColor=white)](https://jestjs.io/)
+[![RealTime](https://img.shields.io/badge/RealTime-Socket.IO-010101?style=for-the-badge&logo=socket.io&logoColor=white)](https://socket.io/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 
-> **Live Production URL:** [https://meditrack-m156.onrender.com](https://meditrack-m156.onrender.com)  
-> **Staff Credentials:** PIN `1234` (Bcrypt verified) • Roles: Receptionist (`reception`) & Doctor (`doctor`)
+> **Live Deployment:** [https://meditrack-m156.onrender.com](https://meditrack-m156.onrender.com)  
+> **Demo Staff Credentials:** PIN `1234` (Bcrypt verified) • Roles: Receptionist (`reception`) & Doctor (`doctor`)
 
 ---
 
-## 📋 Project Overview
-**MediTrack** is a secure, real-time outpatient department (OPD) queue coordination and digital prescription system designed for modern community clinics and hospitals. It integrates:
-- **Automated Smart Triage Engine:** Calculates patient urgency scores in real time based on vitals, demographics, and clinical red flags, complete with ethical decision-support disclaimers.
-- **Enterprise Security Architecture:** Real JSON Web Token (JWT) authentication with 8-hour expiration, Bcrypt password hashing (10 salt rounds), and strict Role-Based Access Control (RBAC).
-- **Patient Data Privacy Layer:** Protects patient anonymity by masking names (e.g. `Ramesh S.`) and strictly preventing exposure of phone numbers and raw symptoms through public queue feeds.
-- **Dual Storage Engine:** Seamless connection to MongoDB Atlas with an automated in-memory failover fallback ensuring 100% demo uptime.
-- **Digital Prescription Pad:** Doctor-authenticated Rx pad that automatically transitions patient queue status to `Completed` and generates formatted print slips.
-- **Bilingual Accessibility:** English and हिन्दी (Hindi) language support.
+## 📌 Problem Statement & Objectives
+
+### Problem Statement
+In community outpatient clinics and regional primary health centers (PHCs), manual paper-based token queues create overcrowding, arbitrary wait times, lack of emergency prioritization, and exposed patient medical confidentiality. Physical paper prescriptions are prone to loss, handwriting misinterpretations, and lack audit history.
+
+### Project Objectives
+1. **Algorithmic Outpatient Triage:** Automatically prioritize critical cases (e.g. chest pain, high fever in seniors) over routine checkups.
+2. **Patient Data Privacy (HIPAA / DISHA Principles):** Mask names (e.g. `Ramesh S.`) and strictly omit phone numbers and clinical symptoms from public waiting room screens.
+3. **Real-Time Queue Streaming:** Deliver sub-second queue status updates across Reception, Doctor Cabin, and Public Display via **Socket.IO** without page refreshes.
+4. **Enterprise Role-Based Security:** Prevent unauthorized prescription issuance by receptionists or queue tampering through cryptographically signed **JSON Web Tokens (JWT)** and **Bcrypt** hashed credentials.
+5. **Zero-Downtime Reliability:** Dual storage architecture seamlessly connecting to MongoDB Atlas with an automatic in-memory failover fallback.
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+flowchart TD
+    subgraph Clients["Frontend Clients (React 18 + Tailwind CSS)"]
+        A["Patient Walk-in Check-in (/)"]
+        B["Public Live Queue Board (/queue)"]
+        C["Reception Desk (/reception)"]
+        D["Doctor Consultation Portal (/doctor)"]
+    end
+
+    subgraph SecurityLayer["Security & Gateway Layer"]
+        E["CORS Origin Filter"]
+        F["Rate Limiter (Brute Force Guard)"]
+        G["JWT Auth Middleware (verifyToken)"]
+        H["RBAC Middleware (requireRole)"]
+        I["Input Validator & Sanitizer"]
+    end
+
+    subgraph BackendCore["Backend API & Real-time Server (Node.js + Express)"]
+        J["Auth Controller"]
+        K["Patient & Queue Controller"]
+        L["Prescription Controller"]
+        M["Triage Evaluation Engine"]
+        N["Socket.IO Real-Time Emitter"]
+    end
+
+    subgraph DataStore["Dual Storage Engine"]
+        O["MongoDB Atlas Cloud Database"]
+        P["In-Memory Resilient Fallback Engine"]
+    end
+
+    Clients --> SecurityLayer
+    SecurityLayer --> BackendCore
+    BackendCore --> DataStore
+    BackendCore -- "Emit 'queue:updated'" --> Clients
+```
 
 ---
 
 ## 🔒 Security Architecture & Role-Based Access Control (RBAC)
 
 ### 1. Authentication Layer
-- **Cryptographic Signing:** Industry-standard `jsonwebtoken` (HMAC-SHA256) signed with `JWT_SECRET`.
+- **Cryptographic Signing:** Signed using `jsonwebtoken` (HMAC-SHA256) with dynamic secure runtime fallback.
 - **Credential Storage:** Staff PINs and passwords are never stored in plain text; all credentials are encrypted using `bcryptjs` with 10 salt rounds.
+- **Brute Force Protection:** Login endpoint `/api/auth/login` is protected with `express-rate-limit` (15 requests per 15 min window).
 - **Session Lifecycle:** Tokens expire in 8 hours (`JWT_EXPIRES_IN=8h`). The client context automatically catches `TOKEN_EXPIRED` (HTTP 401), clears storage, and redirects to the sign-in modal.
 
 ### 2. Authorization Permission Matrix
@@ -38,136 +83,167 @@
 | `/api/patients` | `POST` | ✅ Allowed | ✅ Allowed | ✅ Allowed | Register appointment & triage |
 | `/api/auth/login` | `POST` | ✅ Allowed | ✅ Allowed | ✅ Allowed | Bcrypt verify PIN & return JWT |
 | `/api/patients` | `GET` | ❌ 401 Blocked | ✅ Allowed (Full Data) | ✅ Allowed (Full Data) | Full clinical patient roster |
+| `/api/patients/call-next` | `POST` | ❌ 401 Blocked | ✅ Allowed | ✅ Allowed | Call next highest-urgency token |
 | `/api/patients/:id` | `PUT` | ❌ 401 Blocked | ✅ Allowed | ✅ Allowed | Advance consultation status |
 | `/api/patients/:id` | `DELETE`| ❌ 401 Blocked | ✅ Allowed | ❌ 403 Forbidden | Remove record from queue |
 | `/api/prescriptions` | `POST` | ❌ 401 Blocked | ❌ 403 Forbidden | ✅ Allowed | Issue official Rx and complete |
 | `/api/prescriptions` | `GET` | ❌ 401 Blocked | ✅ Allowed | ✅ Allowed | Review digital Rx archive |
+| `/api/prescriptions/patient/:id` | `GET` | ❌ 401 Blocked | ❌ 403 Forbidden | ✅ Allowed | View patient Rx consultation history |
 
-### 3. Patient Data Privacy Enforcement (HIPAA / DISHA Principles)
-- **Public View Isolation:** When unauthenticated patients or waiting room displays access `/api/patients/public-queue`, sensitive fields (`phone`, `symptoms`, clinical notes) are stripped before sending the response.
-- **Name Masking:** Names are obfuscated (e.g. `Ramesh Sharma` $\rightarrow$ `Ramesh S.`).
-- **Data Leak Prevention:** Sanitized error handling middleware masks all internal database exceptions and stack traces from API callers.
+---
+
+## 🗄️ Database Schemas & Optimization
+
+### Mongoose Models & Compound Indexes
+- **Patient Schema (`models/Patient.js`):**
+  - Fields: `tokenNumber`, `name`, `age`, `gender`, `phone`, `temperature`, `symptoms`, `priority`, `riskScore`, `status`, `prescription`.
+  - Indexes:
+    - `{ status: 1, priority: 1, createdAt: 1 }` (Fast priority queue sorting).
+    - `{ tokenNumber: 1 }` (Unique token retrieval).
+    - `{ name: 1 }` (Search indexing).
+- **Prescription Schema (`models/Prescription.js`):**
+  - Fields: `patientId`, `patientName`, `tokenNumber`, `doctorName`, `diagnosis`, `medicines: [{ medicineName, dosage, duration }]`, `notes`, `doctorNotes`, `followUpDate`.
+  - Indexes: `{ patientId: 1, createdAt: -1 }` (Fast patient history queries).
+- **Staff Schema (`models/Staff.js`):**
+  - Fields: `username`, `name`, `role`, `passwordHash`, `isActive`.
 
 ---
 
 ## 🧬 Automated Smart Triage & Clinical Decision-Support
 
-### Priority Classification Rules
-- 🔴 **High Priority (Priority 1, 85% Estimated Risk Score):**  
-  Triggered if **Age $\ge 65$** OR **Temperature $\ge 102^\circ\text{F}$** OR **Acute Red-Flag Symptoms** (*severe chest pain, shortness of breath, sudden numbness, loss of consciousness*). Automatically sequenced to the head of the queue.
-- 🟡 **Medium Priority (Priority 2, 50% Estimated Risk Score):**  
-  Triggered if **Age $\ge 50$** OR **Temperature $\ge 100^\circ\text{F}$**.
-- 🟢 **Normal Priority (Priority 3, 15% Estimated Risk Score):**  
-  Standard routine outpatient checkup sequenced sequentially.
+### Priority Rules
+- 🔴 **High Priority (Priority 1, 85% Estimated Risk Score):** Triggered if **Age $\ge 65$** OR **Temperature $\ge 102^\circ\text{F}$** OR **Acute Red-Flag Symptoms** (*chest pain, shortness of breath, acute numbness*). Sequenced to the head of the queue.
+- 🟡 **Medium Priority (Priority 2, 50% Estimated Risk Score):** Triggered if **Age $\ge 50$** OR **Temperature $\ge 100^\circ\text{F}$**.
+- 🟢 **Normal Priority (Priority 3, 15% Estimated Risk Score):** Standard routine outpatient checkup sequenced sequentially.
 
-### ⚠️ Decision-Support & Medical Safety Disclaimer
-> *"MediTrack Automated Smart Triage is an algorithmic decision-support tool developed strictly for queue prioritization and educational demonstration. It is NOT a clinically validated diagnostic device or medical diagnosis. Attending licensed physicians retain sole clinical responsibility for all patient assessments, triage priority overrides, and medical management. For acute emergency symptoms, patients must contact emergency medical services (112 / 102) immediately."*
+### ⚠️ Decision-Support Disclaimer
+> *"MediTrack Automated Smart Triage is an algorithmic decision-support tool developed strictly for queue prioritization and educational demonstration. It is NOT a clinically validated diagnostic device or medical diagnosis. Attending physicians retain sole clinical responsibility for patient assessments. For acute emergency symptoms, call emergency services (112 / 102) immediately."*
 
 ---
 
 ## 🧪 Automated Test Suite (Jest + Supertest)
 
-The project includes an end-to-end automated testing suite with **36 unit & integration tests** covering authentication, role boundaries, data privacy, patient CRUD, and triage logic.
+**41 automated test cases passed across 5 test suites (100% pass rate):**
 
 ```bash
-# Run all automated tests
+# Execute the test suite
 cd backend
 npm test
 ```
 
-### Test Suite Breakdown:
-1. `tests/auth.test.js`: Verifies JWT issuance, Bcrypt comparison, 401 on incorrect PIN, and `/api/auth/me` session extraction.
-2. `tests/authorization.test.js`: Verifies 401 on missing/expired tokens, 403 when receptionist attempts prescribing, and 403 when doctor attempts deleting patient records.
-3. `tests/privacy_and_patients.test.js`: Verifies public queue strips phone numbers and symptoms, verifies patient registration validation (min 3 chars, Indian phone regex, temperature bounds).
-4. `tests/prescriptions.test.js`: Verifies doctor prescription issuance, input validation, and automatic patient status update to `Completed`.
-5. `tests/triage.test.js`: Verifies all triage algorithmic branches, emergency notices, and legal disclaimers.
-
 ```text
-PASS tests/authorization.test.js
-PASS tests/privacy_and_patients.test.js
-PASS tests/auth.test.js
-PASS tests/prescriptions.test.js
-PASS tests/triage.test.js
+PASS tests/auth.test.js (6 tests)
+  ✓ should authenticate reception staff with valid PIN and return JWT
+  ✓ should authenticate doctor with valid PIN and return JWT
+  ✓ should reject login with incorrect PIN (401 Unauthorized)
+  ✓ should reject login request when PIN/password is missing (400 Bad Request)
+  ✓ should return current verified user profile on GET /api/auth/me with valid JWT
+  ✓ should reject GET /api/auth/me when token is omitted (401 Unauthorized)
+
+PASS tests/authorization.test.js (8 tests)
+  ✓ should allow receptionist to access GET /api/patients
+  ✓ should allow doctor to access GET /api/patients
+  ✓ should block unauthenticated requests to GET /api/patients with 401
+  ✓ should block receptionist from creating prescriptions with 403 Forbidden
+  ✓ should allow doctor to create a digital prescription (201 Created)
+  ✓ should block receptionist from fetching digital prescriptions with 403 Forbidden
+  ✓ should allow doctor to fetch digital prescriptions (200 OK)
+  ✓ should block non-admin staff from deleting patient records with 403 Forbidden
+
+PASS tests/privacy_and_patients.test.js (12 tests)
+  ✓ should allow anyone to view public queue without authentication
+  ✓ should mask patient names in the public queue
+  ✓ should NOT expose phone numbers or symptoms in the public queue
+  ✓ should reject patient registration when required fields are missing (400 Bad Request)
+  ✓ should reject patient registration when phone number is invalid (400 Bad Request)
+  ✓ should allow authenticated receptionist to register a patient with sequential token
+  ✓ should return full unmasked patient details for authenticated staff
+  ✓ should allow updating patient status
+  ✓ should prioritize Emergency patients ahead of Normal patients
+  ✓ should automatically call the next highest priority waiting patient (POST /call-next)
+  ✓ should support search query parameter on GET /api/patients
+  ✓ should support pagination on GET /api/patients
+
+PASS tests/prescriptions.test.js (6 tests)
+  ✓ should reject prescription creation when diagnosis or medicines are missing
+  ✓ should allow a doctor to generate and store a digital prescription
+  ✓ should retrieve the generated prescription for the patient
+  ✓ should return 404 when querying prescription for non-existent patient
+  ✓ should support followUpDate and doctorNotes in prescription issuance
+  ✓ should retrieve prescription history for specific patient via GET /api/prescriptions/patient/:patientId
+
+PASS tests/triage.test.js (7 tests)
+  ✓ should classify chest pain as Emergency priority with red flag
+  ✓ should classify high fever as Urgent priority
+  ✓ should classify routine symptoms as Normal priority
+  ✓ should include emergency medical advisory when red flags are present
+  ✓ should include non-clinical decision support disclaimer
+  ✓ should correctly calculate estimated wait times based on priority and queue position
+  ✓ should calculate zero wait time for currently consulting patient
 
 Test Suites: 5 passed, 5 total
-Tests:       36 passed, 36 total
+Tests:       41 passed, 41 total
 Snapshots:   0 total
-Time:        8.479 s
+Time:        22.698 s
 ```
 
 ---
 
-## 🛠️ Complete REST API Reference
-
-| Endpoint | Method | Auth Required | Description |
-|---|:---:|:---:|---|
-| `/api/status` | `GET` | No | System health check, database status & security mode |
-| `/api/patients/public-queue` | `GET` | No | Public queue feed with masked names & no personal data |
-| `/api/patients` | `POST` | No | Patient registration & smart token generation |
-| `/api/auth/login` | `POST` | No | Staff authentication returning JWT |
-| `/api/auth/me` | `GET` | JWT | Verified session profile |
-| `/api/patients` | `GET` | JWT (Staff) | Complete patient roster with clinical vitals |
-| `/api/patients/:id` | `PUT` | JWT (Staff) | Advance queue status (`Waiting` $\rightarrow$ `In-Consultation` $\rightarrow$ `Completed`) |
-| `/api/patients/:id` | `DELETE` | JWT (Reception) | Remove patient record |
-| `/api/prescriptions` | `POST` | JWT (Doctor) | Generate digital prescription slip |
-| `/api/prescriptions` | `GET` | JWT (Staff) | Access prescription archive |
-
----
-
-## ⚙️ Environment Variables
-
-Create a `backend/.env` file based on `.env.example`:
+## ⚙️ Environment Variables (`backend/.env.example`)
 
 ```env
-# Server Network Port
+# Server Port & Mode
 PORT=5000
 NODE_ENV=production
 
-# JSON Web Token Security
-JWT_SECRET=your_super_secret_jwt_signing_key_here
+# JWT Signing Key
+JWT_SECRET=replace_with_a_secure_random_string_in_production
 JWT_EXPIRES_IN=8h
 
-# MongoDB Atlas Cloud URI (Leave blank to use Smart In-Memory Fallback)
-MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.yourdomain.mongodb.net/meditrack_db?retryWrites=true&w=majority
+# MongoDB Cloud Connection (Optional - defaults to In-Memory Fallback)
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/meditrack?retryWrites=true&w=majority
 
 # Staff Credentials
 RECEPTION_PIN=1234
 DOCTOR_PIN=1234
+
+# Allowed Client Origin
+CLIENT_URL=https://meditrack-m156.onrender.com
 ```
 
 ---
 
-## 🚀 Quick Start (Local Execution)
+## 🚀 Execution Commands
 
 ```bash
-# 1. Clone repository
+# Clone
 git clone https://github.com/Nidhi-shakya/MediTrack.git
 cd MediTrack
 
-# 2. Install all dependencies
-npm run install:all
+# Install Dependencies
+npm --prefix backend install
+npm --prefix frontend install
 
-# 3. Build optimized frontend production bundle
-npm run build
+# Build Frontend Bundle
+npm --prefix frontend run build
 
-# 4. Start unified server on http://localhost:5000
-npm start
+# Run Automated Tests
+npm --prefix backend test
+
+# Start Production Server (serves API & Frontend on http://localhost:5000)
+npm --prefix backend start
 ```
 
 ---
 
-## 🎓 University Evaluation Checklist (25 Marks)
+## 🎓 MCA Project Viva Preparation & Key Workflows
 
-- [x] **Multiple React Components:** `Navbar`, `StatCard`, `PatientCard`, `BookingForm`, `LiveQueueBoard`, `ProtectedRoute`, `BookingPage`, `DoctorPortal`, `ReceptionDashboard`, `LoginPage`.
-- [x] **Responsive Design:** Mobile-first layout with Tailwind CSS breakpoints (`sm:`, `md:`, `lg:`, `xl:`).
-- [x] **Native Fetch API:** Native `fetch()` with `async/await` throughout; zero Axios dependencies.
-- [x] **Error Handling:** Full `try/catch` on frontend and backend with sanitized JSON errors.
-- [x] **Props and State:** Reusable components driven by props; local and global context state.
-- [x] **Conditional Rendering:** Loading spinners, triage badges, role buttons, empty states.
-- [x] **React Router v6:** Public (`/`, `/queue`, `/login`) and Protected routes (`/reception`, `/doctor`).
-- [x] **Validation:** Name $\ge 3$, Age 1–120, Phone `/^[6-9]\d{9}$/`, Temp 95–108°F with inline red feedback.
-- [x] **Context API & Hooks:** Global `ClinicContext` with JWT session, queue synchronization, and trilingual support.
-- [x] **REST API:** Modular Express router architecture.
-- [x] **Environment Variables:** `.env.example` template with configurable secrets.
-- [x] **MongoDB CRUD & Mongoose Schemas:** Full schema types, validators, and timestamps.
-- [x] **Atlas + In-Memory Fallback:** Reliable cloud connectivity with automated offline fallback.
+### 1. Explain the Authentication & Authorization Flow
+- **Authentication:** When a staff member inputs their PIN, the server looks up the staff profile and executes `bcrypt.compare()`. If valid, the server creates a signed JWT containing `{ id, username, role, name }` with a expiration of 8 hours.
+- **Authorization:** On protected requests, `authenticateToken` parses `Authorization: Bearer <token>`, verifies the HMAC-SHA256 signature, and attaches `req.user`. Then `requireRole(['doctor'])` checks whether the user's role matches the required clearance. If not, it halts the request with `HTTP 403 Forbidden`.
+
+### 2. How is Patient Privacy Protected?
+- When the live queue board fetches data from `/api/patients/public-queue`, the backend passes all records through `storage.maskPatientName()` (`Ramesh Sharma` $\rightarrow$ `Ramesh S.`) and deletes the `phone` and `symptoms` keys from the JSON response before sending it to the client. Full details are only provided on `/api/patients` when accompanied by a valid staff JWT.
+
+### 3. How do Real-time Updates Work without Page Refreshes?
+- When a patient books an appointment, a receptionist advances queue status, or a doctor completes a consultation, the backend invokes `io.emit('queue:updated')`. The React client's Socket.IO listener intercepts this event and calls `fetchPublicQueue()` and `fetchPatients()`, updating the state smoothly in real time across all open tabs.

@@ -109,6 +109,27 @@ let inMemoryPatients = JSON.parse(JSON.stringify(initialPatients));
 let inMemoryPrescriptions = [];
 let inMemoryStaff = JSON.parse(JSON.stringify(initialStaff));
 
+// Socket.IO Server Instance Holder for Real-time Notifications (Phase 3)
+let ioInstance = null;
+
+const setSocketIO = (io) => {
+  ioInstance = io;
+};
+
+const broadcastQueueUpdate = (action, data = null) => {
+  if (ioInstance) {
+    try {
+      ioInstance.emit('queue:updated', {
+        action,
+        data,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.warn('Socket.IO broadcast warning:', err.message);
+    }
+  }
+};
+
 // Helper: Mask Patient Name for Public Queue Privacy (Requirement 3)
 // Example: "Ramesh Sharma" -> "Ramesh S."
 const maskPatientName = (fullName) => {
@@ -170,13 +191,59 @@ const sortQueue = (patients) => {
 };
 
 module.exports = {
-  getPatients: async () => {
+  setSocketIO,
+  broadcastQueueUpdate,
+
+  getPatients: async (filterOptions = {}) => {
+    const { search, status, page, limit } = filterOptions;
     const dbStatus = getDatabaseStatus();
+    let list = [];
+
     if (dbStatus.isConnected) {
-      const list = await Patient.find().populate('prescription').lean();
-      return sortQueue(list);
+      const query = {};
+      if (status) query.status = status;
+      if (search && search.trim()) {
+        const regex = new RegExp(search.trim(), 'i');
+        query.$or = [{ name: regex }, { tokenNumber: regex }, { phone: regex }];
+      }
+      list = await Patient.find(query).populate('prescription').lean();
+    } else {
+      list = inMemoryPatients;
+      if (status) {
+        list = list.filter((p) => p.status === status);
+      }
+      if (search && search.trim()) {
+        const queryTerm = search.trim().toLowerCase();
+        list = list.filter(
+          (p) =>
+            (p.name && p.name.toLowerCase().includes(queryTerm)) ||
+            (p.tokenNumber && p.tokenNumber.toLowerCase().includes(queryTerm)) ||
+            (p.phone && p.phone.includes(queryTerm))
+        );
+      }
     }
-    return sortQueue(inMemoryPatients);
+
+    const sorted = sortQueue(list);
+
+    // If pagination requested
+    if (page && limit) {
+      const pageNum = Math.max(1, parseInt(page, 10));
+      const limitNum = Math.max(1, parseInt(limit, 10));
+      const startIndex = (pageNum - 1) * limitNum;
+      const paginatedItems = sorted.slice(startIndex, startIndex + limitNum);
+
+      return {
+        data: paginatedItems,
+        pagination: {
+          total: sorted.length,
+          page: pageNum,
+          limit: limitNum,
+          totalPages: Math.ceil(sorted.length / limitNum),
+        },
+      };
+    }
+
+    return sorted;
   },
 
   getPatientById: async (id) => {
@@ -190,6 +257,7 @@ module.exports = {
   createPatient: async (patientData) => {
     const tokenNumber = await generateNextTokenNumber();
     const dbStatus = getDatabaseStatus();
+    let saved;
 
     if (dbStatus.isConnected) {
       const newPatient = new Patient({
@@ -197,86 +265,143 @@ module.exports = {
         tokenNumber,
         status: 'Waiting',
       });
-      return newPatient.save();
+      saved = await newPatient.save();
+    } else {
+      saved = {
+        _id: 'mem_' + Date.now() + Math.random().toString(36).substr(2, 4),
+        ...patientData,
+        tokenNumber,
+        status: 'Waiting',
+        prescription: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      inMemoryPatients.push(saved);
     }
 
-    const newRecord = {
-      _id: 'mem_' + Date.now() + Math.random().toString(36).substr(2, 4),
-      ...patientData,
-      tokenNumber,
-      status: 'Waiting',
-      prescription: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    inMemoryPatients.push(newRecord);
-    return newRecord;
+    broadcastQueueUpdate('PATIENT_REGISTERED', saved);
+    return saved;
   },
 
   updatePatient: async (id, updateFields) => {
     const dbStatus = getDatabaseStatus();
+    let updated = null;
+
     if (dbStatus.isConnected) {
-      return Patient.findByIdAndUpdate(id, updateFields, { new: true });
+      updated = await Patient.findByIdAndUpdate(id, updateFields, { new: true });
+    } else {
+      const idx = inMemoryPatients.findIndex((p) => String(p._id) === String(id));
+      if (idx !== -1) {
+        inMemoryPatients[idx] = {
+          ...inMemoryPatients[idx],
+          ...updateFields,
+          updatedAt: new Date().toISOString(),
+        };
+        updated = inMemoryPatients[idx];
+      }
     }
 
-    const idx = inMemoryPatients.findIndex((p) => String(p._id) === String(id));
-    if (idx === -1) return null;
+    if (updated) {
+      broadcastQueueUpdate('PATIENT_UPDATED', updated);
+    }
+    return updated;
+  },
 
-    inMemoryPatients[idx] = {
-      ...inMemoryPatients[idx],
-      ...updateFields,
-      updatedAt: new Date().toISOString(),
-    };
-    return inMemoryPatients[idx];
+  callNextPatient: async () => {
+    const dbStatus = getDatabaseStatus();
+    let nextPatient = null;
+
+    if (dbStatus.isConnected) {
+      // Find waiting patients, sort by priority and createdAt
+      const waiting = await Patient.find({ status: 'Waiting' }).lean();
+      if (!waiting || waiting.length === 0) return null;
+      const sorted = sortQueue(waiting);
+      nextPatient = sorted[0];
+
+      if (nextPatient) {
+        const updated = await Patient.findByIdAndUpdate(
+          nextPatient._id,
+          { status: 'In-Consultation' },
+          { new: true }
+        );
+        broadcastQueueUpdate('CALL_NEXT', updated);
+        return updated;
+      }
+    } else {
+      const waiting = inMemoryPatients.filter((p) => p.status === 'Waiting');
+      if (waiting.length === 0) return null;
+      const sorted = sortQueue(waiting);
+      nextPatient = sorted[0];
+
+      if (nextPatient) {
+        const idx = inMemoryPatients.findIndex((p) => String(p._id) === String(nextPatient._id));
+        if (idx !== -1) {
+          inMemoryPatients[idx].status = 'In-Consultation';
+          inMemoryPatients[idx].updatedAt = new Date().toISOString();
+          nextPatient = inMemoryPatients[idx];
+          broadcastQueueUpdate('CALL_NEXT', nextPatient);
+          return nextPatient;
+        }
+      }
+    }
+
+    return null;
   },
 
   deletePatient: async (id) => {
     const dbStatus = getDatabaseStatus();
+    let success = false;
+
     if (dbStatus.isConnected) {
       const res = await Patient.findByIdAndDelete(id);
-      return !!res;
+      success = !!res;
+    } else {
+      const initialLen = inMemoryPatients.length;
+      inMemoryPatients = inMemoryPatients.filter((p) => String(p._id) !== String(id));
+      success = inMemoryPatients.length < initialLen;
     }
 
-    const initialLen = inMemoryPatients.length;
-    inMemoryPatients = inMemoryPatients.filter((p) => String(p._id) !== String(id));
-    return inMemoryPatients.length < initialLen;
+    if (success) {
+      broadcastQueueUpdate('PATIENT_DELETED', { id });
+    }
+    return success;
   },
 
   createPrescription: async (prescriptionData) => {
     const dbStatus = getDatabaseStatus();
+    let savedRx = null;
 
     if (dbStatus.isConnected) {
       const newRx = new Prescription(prescriptionData);
-      const savedRx = await newRx.save();
+      savedRx = await newRx.save();
 
       // Automatically mark patient as Completed & attach prescription
       await Patient.findByIdAndUpdate(prescriptionData.patientId, {
         status: 'Completed',
         prescription: savedRx._id,
       });
+    } else {
+      savedRx = {
+        _id: 'rx_' + Date.now(),
+        ...prescriptionData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      inMemoryPrescriptions.push(savedRx);
 
-      return savedRx;
+      // Update patient status to Completed
+      const idx = inMemoryPatients.findIndex(
+        (p) => String(p._id) === String(prescriptionData.patientId)
+      );
+      if (idx !== -1) {
+        inMemoryPatients[idx].status = 'Completed';
+        inMemoryPatients[idx].prescription = savedRx;
+        inMemoryPatients[idx].updatedAt = new Date().toISOString();
+      }
     }
 
-    const newRx = {
-      _id: 'rx_' + Date.now(),
-      ...prescriptionData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    inMemoryPrescriptions.push(newRx);
-
-    // Update patient status to Completed
-    const idx = inMemoryPatients.findIndex(
-      (p) => String(p._id) === String(prescriptionData.patientId)
-    );
-    if (idx !== -1) {
-      inMemoryPatients[idx].status = 'Completed';
-      inMemoryPatients[idx].prescription = newRx;
-      inMemoryPatients[idx].updatedAt = new Date().toISOString();
-    }
-
-    return newRx;
+    broadcastQueueUpdate('PRESCRIPTION_CREATED', savedRx);
+    return savedRx;
   },
 
   getPrescriptions: async () => {
@@ -285,6 +410,16 @@ module.exports = {
       return Prescription.find().sort({ createdAt: -1 }).lean();
     }
     return [...inMemoryPrescriptions].reverse();
+  },
+
+  getPrescriptionsByPatientId: async (patientId) => {
+    const dbStatus = getDatabaseStatus();
+    if (dbStatus.isConnected) {
+      return Prescription.find({ patientId }).sort({ createdAt: -1 }).lean();
+    }
+    return inMemoryPrescriptions
+      .filter((p) => String(p.patientId) === String(patientId))
+      .reverse();
   },
 
   findStaffByUsername: async (username) => {

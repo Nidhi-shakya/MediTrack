@@ -9,6 +9,8 @@
 // ==============================================================================
 
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
@@ -17,23 +19,59 @@ const fs = require('fs');
 dotenv.config();
 
 const { connectDB, getDatabaseStatus } = require('./config/db');
+const storage = require('./services/storageService');
 const authRoutes = require('./routes/authRoutes');
 const patientRoutes = require('./routes/patientRoutes');
 const prescriptionRoutes = require('./routes/prescriptionRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
-// Security & Parsing Middlewares
-app.use(
-  cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+// [Phase 1: Security] Restrict CORS to approved frontend origins
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:5000',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5000',
+  process.env.CLIENT_URL,
+  process.env.RENDER_EXTERNAL_URL,
+].filter(Boolean);
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, server-to-server, curl, same-origin)
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.onrender.com')) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS access blocked by security policy.'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// [Phase 3: Real-Time Smart Queue Updates with Socket.IO]
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+  },
+});
+
+storage.setSocketIO(io);
+app.set('io', io);
+
+io.on('connection', (socket) => {
+  socket.on('disconnect', () => {});
+});
 
 // Initialize Database Connection
 connectDB();
@@ -108,15 +146,18 @@ app.use(errorHandler);
 
 // Start Server when invoked directly (allows test runner to import app cleanly)
 if (require.main === module) {
-  app.listen(PORT, '0.0.0.0', () => {
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`================================================================`);
     console.log(`🏥 MediTrack Clinic Secure API Server Running on port: ${PORT}`);
     console.log(`🌐 Server Local URL:   http://localhost:${PORT}`);
     console.log(`🌐 Server Loopback:    http://127.0.0.1:${PORT}`);
-    console.log(`🔒 Authentication:     JWT + Bcrypt (Active)`);
+    console.log(`🔒 Authentication:     JWT + Bcrypt + Rate Limiter (Active)`);
     console.log(`🛡️ Patient Privacy:    Masked public queue enabled`);
+    console.log(`⚡ Real-Time Engine:   Socket.IO Active`);
     console.log(`================================================================`);
   });
 }
 
+app.server = server;
+app.io = io;
 module.exports = app;

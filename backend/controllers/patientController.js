@@ -48,11 +48,27 @@ const getPublicQueue = async (req, res, next) => {
 /**
  * Staff Patient Roster (Authenticated Reception & Doctor Only)
  * [Requirement 2: Full Clinical Details Accessible Only With Valid JWT]
+ * [Phase 3 & 5: Supports Search by Name/Token and Pagination]
  */
 const getAllPatients = async (req, res, next) => {
   try {
-    const patients = await storage.getPatients();
+    const { search, status, page, limit } = req.query;
+    const result = await storage.getPatients({ search, status, page, limit });
 
+    if (page && limit && result.pagination) {
+      return res.status(200).json({
+        success: true,
+        count: result.data.length,
+        data: result.data,
+        pagination: result.pagination,
+        requestingStaff: {
+          username: req.user.username,
+          role: req.user.role,
+        },
+      });
+    }
+
+    const patients = Array.isArray(result) ? result : result.data;
     return res.status(200).json({
       success: true,
       count: patients.length,
@@ -61,6 +77,33 @@ const getAllPatients = async (req, res, next) => {
         username: req.user.username,
         role: req.user.role,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Call Next Patient in Priority Queue
+ * Automatically moves highest-urgency waiting patient to 'In-Consultation'
+ * Protected: Reception & Doctor Staff
+ */
+const callNextPatient = async (req, res, next) => {
+  try {
+    const nextPatient = await storage.callNextPatient();
+
+    if (!nextPatient) {
+      return res.status(200).json({
+        success: false,
+        message: 'No patients currently waiting in queue.',
+        data: null,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Token ${nextPatient.tokenNumber} (${nextPatient.name}) is now called for consultation.`,
+      data: nextPatient,
     });
   } catch (error) {
     next(error);
@@ -183,5 +226,6 @@ module.exports = {
   registerPatient,
   updatePatientStatus,
   deletePatient,
+  callNextPatient,
 };
 

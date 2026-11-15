@@ -11,7 +11,7 @@ const storage = require('../services/storageService');
  */
 const createPrescription = async (req, res, next) => {
   try {
-    const { patientId, diagnosis, medicines, notes, doctorName } = req.body;
+    const { patientId, diagnosis, medicines, notes, doctorNotes, followUpDate, doctorName } = req.body;
 
     const patient = await storage.getPatientById(patientId);
     if (!patient) {
@@ -29,7 +29,9 @@ const createPrescription = async (req, res, next) => {
       doctorName: doctorName || req.user.name || 'Dr. A. Verma (MBBS, MD - General Medicine)',
       diagnosis: diagnosis.trim(),
       medicines,
-      notes: notes ? notes.trim() : 'Drink plenty of water and follow prescribed dosages.',
+      notes: (notes || doctorNotes || 'Drink plenty of warm water and take medications as prescribed.').trim(),
+      doctorNotes: (doctorNotes || notes || '').trim(),
+      followUpDate: followUpDate || 'After 3 Days',
     };
 
     const savedPrescription = await storage.createPrescription(prescriptionPayload);
@@ -62,8 +64,28 @@ const getAllPrescriptions = async (req, res, next) => {
   }
 };
 
+/**
+ * Retrieve Prescription History for a Specific Patient (Phase 4)
+ * Protected: Doctor Only
+ */
+const getPrescriptionByPatientId = async (req, res, next) => {
+  try {
+    const { patientId } = req.params;
+    const history = await storage.getPrescriptionsByPatientId(patientId);
+
+    return res.status(200).json({
+      success: true,
+      count: history.length,
+      data: history,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createPrescription,
   getAllPrescriptions,
+  getPrescriptionByPatientId,
 };
 

@@ -22,5 +22,13 @@ router.post(
 // 2. Retrieve Prescriptions History (Authenticated Staff Only)
 router.get('/', authenticateToken, prescriptionController.getAllPrescriptions);
 
+// 3. Retrieve Prescriptions for Specific Patient (Doctor Role Clearance Required)
+router.get(
+  '/patient/:patientId',
+  authenticateToken,
+  requireRole('doctor'),
+  prescriptionController.getPrescriptionByPatientId
+);
+
 module.exports = router;
 

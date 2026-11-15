@@ -91,5 +91,40 @@ describe('Prescriptions API (/api/prescriptions)', () => {
     expect(res.body.success).toBe(true);
     expect(Array.isArray(res.body.data)).toBe(true);
   });
+
+  it('should support followUpDate and doctorNotes in prescription issuance', async () => {
+    const rxPayload = {
+      patientId: '65f1a101b1c2d3e4f5a00102', // Sunita Patel
+      diagnosis: 'Acute Bronchitis',
+      medicines: [
+        { medicineName: 'Amoxicillin 500mg', dosage: '1-1-1', duration: '5 Days' },
+      ],
+      notes: 'Take with warm food.',
+      doctorNotes: 'Special clinical observations on bronchial sound.',
+      followUpDate: 'After 5 Days',
+    };
+
+    const res = await request(app)
+      .post('/api/prescriptions')
+      .set('Authorization', `Bearer ${doctorToken}`)
+      .send(rxPayload);
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.followUpDate).toBe('After 5 Days');
+    expect(res.body.data.doctorNotes).toBe('Special clinical observations on bronchial sound.');
+  });
+
+  it('should retrieve prescription history for specific patient via GET /api/prescriptions/patient/:patientId', async () => {
+    const res = await request(app)
+      .get('/api/prescriptions/patient/65f1a101b1c2d3e4f5a00102')
+      .set('Authorization', `Bearer ${doctorToken}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+    expect(res.body.data[0].patientId).toBe('65f1a101b1c2d3e4f5a00102');
+  });
 });
 

@@ -145,9 +145,9 @@ describe('Patient Data Privacy & Registration API', () => {
   });
 
   // ----------------------------------------------------------------------------
-  // Patient Status Updates
+  // Patient Status Updates & Priority Calling (Phase 3)
   // ----------------------------------------------------------------------------
-  describe('PUT /api/patients/:id (Status Update)', () => {
+  describe('PUT /api/patients/:id and POST /call-next', () => {
     it('should update patient status to In-Consultation when authenticated', async () => {
       const res = await request(app)
         .put('/api/patients/65f1a101b1c2d3e4f5a00101')
@@ -167,6 +167,39 @@ describe('Patient Data Privacy & Registration API', () => {
 
       expect(res.statusCode).toBe(400);
       expect(res.body.success).toBe(false);
+    });
+
+    it('should automatically call the next highest priority waiting patient (POST /call-next)', async () => {
+      const res = await request(app)
+        .post('/api/patients/call-next')
+        .set('Authorization', `Bearer ${staffToken}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toBeDefined();
+      expect(res.body.data.status).toBe('In-Consultation');
+    });
+
+    it('should support search query parameter on GET /api/patients', async () => {
+      const res = await request(app)
+        .get('/api/patients?search=Sunita')
+        .set('Authorization', `Bearer ${staffToken}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.some((p) => p.name.includes('Sunita'))).toBe(true);
+    });
+
+    it('should support pagination on GET /api/patients', async () => {
+      const res = await request(app)
+        .get('/api/patients?page=1&limit=2')
+        .set('Authorization', `Bearer ${staffToken}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.length).toBeLessThanOrEqual(2);
+      expect(res.body.pagination).toBeDefined();
+      expect(res.body.pagination.page).toBe(1);
     });
   });
 });

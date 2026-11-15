@@ -21,11 +21,20 @@ router.post('/', validatePatientRegistration, patientController.registerPatient)
 // [Requirement 2: Full Clinical Details require valid Staff JWT]
 router.get('/', authenticateToken, patientController.getAllPatients);
 
-// 4. Update Patient Status (Waiting -> In-Consultation -> Completed)
+// 4. Call Next Patient (Moves highest priority waiting patient to In-Consultation)
+// Protected: Authenticated Staff (Doctor or Reception)
+router.post(
+  '/call-next',
+  authenticateToken,
+  requireRole(['doctor', 'reception']),
+  patientController.callNextPatient
+);
+
+// 5. Update Patient Status (Waiting -> In-Consultation -> Completed)
 // Protected: Authenticated Staff (Reception or Doctor)
 router.put('/:id', authenticateToken, patientController.updatePatientStatus);
 
-// 5. Delete Patient Record
+// 6. Delete Patient Record
 // Protected: Reception Staff Only (Doctors cannot delete queue records)
 router.delete(
   '/:id',

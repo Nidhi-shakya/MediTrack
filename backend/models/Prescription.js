@@ -61,11 +61,23 @@ const prescriptionSchema = new mongoose.Schema(
       type: String,
       default: 'Drink plenty of warm water. Avoid oily and cold foods. Review after 3 days if symptoms persist.',
     },
+    doctorNotes: {
+      type: String,
+      default: '',
+    },
+    followUpDate: {
+      type: String,
+      default: 'After 3 Days',
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Indexes for Fast Prescription History Lookup (Phase 4 & 5)
+prescriptionSchema.index({ patientId: 1, createdAt: -1 });
+prescriptionSchema.index({ tokenNumber: 1 });
 
 module.exports = mongoose.model('Prescription', prescriptionSchema);
 

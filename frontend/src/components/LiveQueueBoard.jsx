@@ -35,12 +35,13 @@ export const LiveQueueBoard = ({
   const waitingPatients = patients
     .filter((p) => p.status === 'Waiting')
     .filter((p) => {
-      // Search filter
+      // Search filter (Safely handles masked public queue items without phone or symptoms)
+      const term = searchTerm.toLowerCase();
       const matchesSearch =
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.tokenNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.phone.includes(searchTerm) ||
-        p.symptoms.toLowerCase().includes(searchTerm.toLowerCase());
+        (p.name && p.name.toLowerCase().includes(term)) ||
+        (p.tokenNumber && p.tokenNumber.toLowerCase().includes(term)) ||
+        (p.phone && p.phone.includes(term)) ||
+        (p.symptoms && p.symptoms.toLowerCase().includes(term));
 
       // Priority filter
       const matchesPriority = priorityFilter === 'ALL' || p.priority === priorityFilter;
@@ -78,10 +79,16 @@ export const LiveQueueBoard = ({
             <span>
               Age/Gender: {activeConsultation.age} yrs • {activeConsultation.gender}
             </span>
-            <span>Symptoms: {activeConsultation.symptoms}</span>
-            <span className="font-bold bg-white text-blue-900 px-2 py-0.5 rounded">
-              Temp: {activeConsultation.temperature}°F
-            </span>
+            {activeConsultation.symptoms ? (
+              <span>Symptoms: {activeConsultation.symptoms}</span>
+            ) : (
+              <span className="italic text-teal-200">Patient in Active Consultation</span>
+            )}
+            {activeConsultation.temperature && (
+              <span className="font-bold bg-white text-blue-900 px-2 py-0.5 rounded">
+                Temp: {activeConsultation.temperature}°F
+              </span>
+            )}
           </div>
         </div>
       )}

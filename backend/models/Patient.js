@@ -76,5 +76,11 @@ const patientSchema = new mongoose.Schema(
   }
 );
 
+// Database Indexes for Fast Queue Sorting & Search (Phase 5)
+patientSchema.index({ status: 1, priority: 1, createdAt: 1 });
+patientSchema.index({ tokenNumber: 1 });
+patientSchema.index({ name: 1 });
+patientSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('Patient', patientSchema);
 

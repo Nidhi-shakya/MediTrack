@@ -4,8 +4,18 @@
 // ==============================================================================
 
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'meditrack_production_secure_jwt_secret_key_2026_xyz';
+// [Phase 1: Security] Secure JWT Secret handling - no predictable hardcoded secret in production
+let JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'test') {
+    JWT_SECRET = 'test_suite_jwt_secret_key_fixed_length_64_bytes_entropy_abc123';
+  } else {
+    JWT_SECRET = crypto.randomBytes(32).toString('hex');
+    console.warn('⚠️ [SECURITY NOTICE] JWT_SECRET environment variable is not set. A secure random runtime secret was generated.');
+  }
+}
 
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'] || req.headers['Authorization'];

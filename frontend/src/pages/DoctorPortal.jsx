@@ -31,6 +31,8 @@ export const DoctorPortal = () => {
     prescriptions,
     savePrescription,
     updatePatientStatus,
+    callNextPatient,
+    fetchPrescriptionHistory,
     staffUser,
     loading,
     t,
@@ -38,8 +40,10 @@ export const DoctorPortal = () => {
 
   // Active Selected Patient for consultation
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [searchFilter, setSearchFilter] = useState('');
+  const [patientHistory, setPatientHistory] = useState([]);
 
-  // Digital Prescription Form State
+  // Digital Prescription Form State (Phase 4: Enhanced with Follow-up Date)
   const [prescriptionForm, setPrescriptionForm] = useState({
     diagnosis: '',
     medicines: [
@@ -47,6 +51,7 @@ export const DoctorPortal = () => {
       { medicineName: 'Cetirizine 10mg', dosage: '0-0-1', duration: '5 Days' },
     ],
     notes: 'Adequate hydration. Avoid strenuous activities. Review in OPD after 3 days if symptoms do not improve.',
+    followUpDate: 'After 3 Days',
   });
 
   // Modal for printable digital prescription
@@ -55,16 +60,29 @@ export const DoctorPortal = () => {
   // Active Tab: 'active' (write rx) or 'history' (view completed)
   const [viewTab, setViewTab] = useState('active');
 
-  // Filter patients needing consultation (In-Consultation or Waiting)
-  const waitingForDoctor = patients.filter(
-    (p) => p.status === 'In-Consultation' || p.status === 'Waiting'
-  );
+  // Filter patients needing consultation (In-Consultation or Waiting) with search filter
+  const waitingForDoctor = patients
+    .filter((p) => p.status === 'In-Consultation' || p.status === 'Waiting')
+    .filter((p) => {
+      if (!searchFilter.trim()) return true;
+      const term = searchFilter.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(term) ||
+        p.tokenNumber.toLowerCase().includes(term) ||
+        (p.phone && p.phone.includes(term))
+      );
+    });
 
   const handleSelectPatient = async (patient) => {
     setSelectedPatient(patient);
     // If patient was waiting, automatically move them to In-Consultation
     if (patient.status === 'Waiting') {
       await updatePatientStatus(patient._id, 'In-Consultation');
+    }
+    // Fetch previous prescription history for this patient (Phase 4)
+    if (fetchPrescriptionHistory) {
+      const history = await fetchPrescriptionHistory(patient._id);
+      setPatientHistory(history);
     }
   };
 
@@ -127,6 +145,8 @@ export const DoctorPortal = () => {
       diagnosis: prescriptionForm.diagnosis.trim(),
       medicines: prescriptionForm.medicines,
       notes: prescriptionForm.notes.trim(),
+      doctorNotes: prescriptionForm.notes.trim(),
+      followUpDate: prescriptionForm.followUpDate || 'After 3 Days',
     };
 
     const res = await savePrescription(payload);
@@ -137,8 +157,10 @@ export const DoctorPortal = () => {
         diagnosis: '',
         medicines: [{ medicineName: '', dosage: '1-0-1', duration: '3 Days' }],
         notes: 'Adequate rest and hydration. Return if symptoms worsen.',
+        followUpDate: 'After 3 Days',
       });
       setSelectedPatient(null);
+      setPatientHistory([]);
     }
   };
 
@@ -158,26 +180,43 @@ export const DoctorPortal = () => {
           </p>
         </div>
 
-        {/* View Toggle */}
-        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs font-bold shadow-sm">
+        {/* Doctor Actions: Call Next & Tab Toggle */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setViewTab('active')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition ${
-              viewTab === 'active' ? 'bg-teal-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-            }`}
+            onClick={async () => {
+              const res = await callNextPatient();
+              if (res.success && res.patient) {
+                handleSelectPatient(res.patient);
+              }
+            }}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
           >
-            <Stethoscope className="w-4 h-4" />
-            Active Queue ({waitingForDoctor.length})
+            <Activity className="w-3.5 h-3.5" />
+            Call Next Patient
           </button>
-          <button
-            onClick={() => setViewTab('history')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition ${
-              viewTab === 'history' ? 'bg-teal-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <History className="w-4 h-4" />
-            Issued Prescriptions ({prescriptions.length})
-          </button>
+
+          {/* View Toggle */}
+          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs font-bold shadow-sm">
+            <button
+              onClick={() => setViewTab('active')}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition ${
+                viewTab === 'active' ? 'bg-teal-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Stethoscope className="w-4 h-4" />
+              Active Queue ({waitingForDoctor.length})
+            </button>
+            <button
+              onClick={() => setViewTab('history')}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition ${
+                viewTab === 'history' ? 'bg-teal-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <History className="w-4 h-4" />
+              Issued Prescriptions ({prescriptions.length})
+            </button>
+          </div>
         </div>
       </div>
 
@@ -185,12 +224,25 @@ export const DoctorPortal = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Column: Waiting Patients Selection List */}
           <div className="lg:col-span-4 space-y-3">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2 flex items-center justify-between">
-              <span>Patients for Consultation</span>
-              <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-bold">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                Patients for Consultation
+              </h3>
+              <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700 text-xs font-bold">
                 {waitingForDoctor.length} in line
               </span>
-            </h3>
+            </div>
+
+            {/* Quick Search Filter */}
+            <div className="relative">
+              <input
+                type="text"
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                placeholder="Search patient or token..."
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+              />
+            </div>
 
             {/* [Requirement 7: Conditional Rendering] */}
             {waitingForDoctor.length === 0 ? (
@@ -378,13 +430,29 @@ export const DoctorPortal = () => {
                     Special Advice & Doctor's Instructions
                   </label>
                   <textarea
-                    rows="3"
+                    rows="2"
                     value={prescriptionForm.notes}
                     onChange={(e) =>
                       setPrescriptionForm({ ...prescriptionForm, notes: e.target.value })
                     }
-                    placeholder="Dietary instructions, precautions, review date..."
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-200 focus:border-teal-500"
+                    placeholder="Dietary instructions, precautions, rest..."
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-teal-200 focus:border-teal-500"
+                  />
+                </div>
+
+                {/* Follow-up Date Field (Phase 4) */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Follow-up Consultation Timeline
+                  </label>
+                  <input
+                    type="text"
+                    value={prescriptionForm.followUpDate}
+                    onChange={(e) =>
+                      setPrescriptionForm({ ...prescriptionForm, followUpDate: e.target.value })
+                    }
+                    placeholder="e.g. After 3 Days, After 1 Week, or SOS"
+                    className="w-full px-4 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-teal-200 focus:border-teal-500"
                   />
                 </div>
 
@@ -583,6 +651,14 @@ export const DoctorPortal = () => {
                 </p>
                 <p className="text-slate-700 italic">{printedPrescription.notes}</p>
               </div>
+
+              {/* Review & Follow-up Schedule (Phase 4) */}
+              {printedPrescription.followUpDate && (
+                <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <span className="font-semibold text-slate-600">Review & Follow-up Schedule:</span>
+                  <span className="font-bold text-teal-800">{printedPrescription.followUpDate}</span>
+                </div>
+              )}
 
               {/* Doctor Signature */}
               <div className="pt-12 flex justify-between items-end border-t border-slate-200">
