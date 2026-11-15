@@ -23,3 +23,4 @@ router.post(
 router.get('/', authenticateToken, prescriptionController.getAllPrescriptions);
 
 module.exports = router;
+

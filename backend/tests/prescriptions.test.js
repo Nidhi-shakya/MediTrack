@@ -92,3 +92,4 @@ describe('Prescriptions API (/api/prescriptions)', () => {
     expect(Array.isArray(res.body.data)).toBe(true);
   });
 });
+

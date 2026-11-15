@@ -52,3 +52,4 @@ staffSchema.methods.comparePassword = async function (candidatePassword) {
 };
 
 module.exports = mongoose.model('Staff', staffSchema);
+

@@ -19,7 +19,7 @@
 - **Patient Data Privacy Layer:** Protects patient anonymity by masking names (e.g. `Ramesh S.`) and strictly preventing exposure of phone numbers and raw symptoms through public queue feeds.
 - **Dual Storage Engine:** Seamless connection to MongoDB Atlas with an automated in-memory failover fallback ensuring 100% demo uptime.
 - **Digital Prescription Pad:** Doctor-authenticated Rx pad that automatically transitions patient queue status to `Completed` and generates formatted print slips.
-- **Trilingual Accessibility:** English, हिन्दी (Hindi), and ਪੰਜਾਬੀ (Punjabi) language support.
+- **Bilingual Accessibility:** English and हिन्दी (Hindi) language support.
 
 ---
 

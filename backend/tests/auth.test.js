@@ -79,3 +79,4 @@ describe('Authentication API (/api/auth)', () => {
     expect(res.body.success).toBe(false);
   });
 });
+

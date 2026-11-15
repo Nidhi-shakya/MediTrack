@@ -138,7 +138,7 @@ export const Navbar = () => {
               </span>
             )}
 
-            {/* Language Switcher [English, Hindi, Punjabi] */}
+            {/* Language Switcher [English & Hindi] */}
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-semibold">
               <Globe className="w-3.5 h-3.5 text-slate-500 ml-1.5" />
               <button
@@ -158,15 +158,6 @@ export const Navbar = () => {
                 title="हिन्दी में बदलें"
               >
                 हिन्दी
-              </button>
-              <button
-                onClick={() => setLanguage('pa')}
-                className={`px-2 py-1 rounded transition-colors ${
-                  language === 'pa' ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                }`}
-                title="ਪੰਜਾਬੀ ਵਿੱਚ ਬਦਲੋ"
-              >
-                ਪੰਜਾਬੀ
               </button>
             </div>
 
@@ -205,11 +196,7 @@ export const Navbar = () => {
           <div className="flex items-center gap-2 md:hidden">
             {/* Mobile Language Button quick toggle */}
             <button
-              onClick={() => {
-                if (language === 'en') setLanguage('hi');
-                else if (language === 'hi') setLanguage('pa');
-                else setLanguage('en');
-              }}
+              onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')}
               className="text-xs font-bold px-2 py-1 rounded bg-slate-100 border border-slate-200 text-teal-700"
             >
               {language.toUpperCase()}
@@ -285,12 +272,6 @@ export const Navbar = () => {
                   className={`px-2 py-1 rounded ${language === 'hi' ? 'bg-teal-600 text-white' : 'bg-slate-100'}`}
                 >
                   हिन्दी
-                </button>
-                <button
-                  onClick={() => setLanguage('pa')}
-                  className={`px-2 py-1 rounded ${language === 'pa' ? 'bg-teal-600 text-white' : 'bg-slate-100'}`}
-                >
-                  ਪੰਜਾਬੀ
                 </button>
               </div>
             </div>
