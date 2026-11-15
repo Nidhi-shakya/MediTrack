@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800;
+  }
+}
+
+/* Print specific styles for prescription printing */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-prescription, #printable-prescription * {
+    visibility: visible;
+  }
+  #printable-prescription {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+    background: white;
+    box-shadow: none;
+  }
+}
+
