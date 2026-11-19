@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const Patient = require('../models/Patient');
 const Prescription = require('../models/Prescription');
@@ -466,7 +467,24 @@ module.exports = {
   findStaffByUsername: async (username) => {
     const cleanUser = String(username).toLowerCase().trim();
     if (getDatabaseStatus().isConnected) {
-      return Staff.findOne({ username: cleanUser, isActive: true });
+      let staff = await Staff.findOne({ username: cleanUser, isActive: true });
+      if (!staff) {
+        const fallback = initialStaff.find((s) => s.username === cleanUser);
+        if (fallback) {
+          try {
+            staff = await Staff.create({
+              username: fallback.username,
+              name: fallback.name,
+              role: fallback.role,
+              passwordHash: fallback.passwordHash,
+              isActive: true,
+            });
+          } catch (e) {
+            staff = await Staff.findOne({ username: cleanUser, isActive: true });
+          }
+        }
+      }
+      return staff;
     }
     return inMemoryStaff.find((s) => s.username === cleanUser && s.isActive) || null;
   },
@@ -474,7 +492,24 @@ module.exports = {
   findStaffByRole: async (role) => {
     const cleanRole = String(role).toLowerCase().trim();
     if (getDatabaseStatus().isConnected) {
-      return Staff.findOne({ role: cleanRole, isActive: true });
+      let staff = await Staff.findOne({ role: cleanRole, isActive: true });
+      if (!staff) {
+        const fallback = initialStaff.find((s) => s.role === cleanRole);
+        if (fallback) {
+          try {
+            staff = await Staff.create({
+              username: fallback.username,
+              name: fallback.name,
+              role: fallback.role,
+              passwordHash: fallback.passwordHash,
+              isActive: true,
+            });
+          } catch (e) {
+            staff = await Staff.findOne({ role: cleanRole, isActive: true });
+          }
+        }
+      }
+      return staff;
     }
     return inMemoryStaff.find((s) => s.role === cleanRole && s.isActive) || null;
   },
@@ -599,5 +634,56 @@ module.exports = {
     }
     med.updatedAt = new Date().toISOString();
     return { ...med, status: computeMedStatus(med) };
+  },
+
+  seedDatabase: async () => {
+    if (!getDatabaseStatus().isConnected) return;
+    try {
+      const recExists = await Staff.findOne({ username: 'reception' });
+      if (!recExists) {
+        await Staff.create({
+          username: 'reception',
+          name: 'Front Desk Receptionist (Counter 1)',
+          role: 'reception',
+          passwordHash: process.env.RECEPTION_PIN
+            ? bcrypt.hashSync(process.env.RECEPTION_PIN, 10)
+            : DEFAULT_HASH,
+          isActive: true,
+        });
+      }
+
+      const docExists = await Staff.findOne({ username: 'doctor' });
+      if (!docExists) {
+        await Staff.create({
+          username: 'doctor',
+          name: 'Dr. A. Verma (MBBS, MD - General Medicine)',
+          role: 'doctor',
+          passwordHash: process.env.DOCTOR_PIN
+            ? bcrypt.hashSync(process.env.DOCTOR_PIN, 10)
+            : DEFAULT_HASH,
+          isActive: true,
+        });
+      }
+
+      const patientCount = await Patient.countDocuments();
+      if (patientCount === 0) {
+        const patientDocs = initialPatients.map((p) => ({
+          ...p,
+          _id: new mongoose.Types.ObjectId(p._id),
+        }));
+        await Patient.insertMany(patientDocs);
+      }
+
+      const medCount = await Medication.countDocuments();
+      if (medCount === 0) {
+        const medDocs = initialMedications.map((m) => ({
+          ...m,
+          _id: new mongoose.Types.ObjectId(m._id),
+        }));
+        await Medication.insertMany(medDocs);
+      }
+    } catch (err) {
+      console.warn('Database seed warning:', err.message);
+    }
   },
 };

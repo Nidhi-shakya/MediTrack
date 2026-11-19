@@ -63,7 +63,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {});
 });
 
-connectDB();
+connectDB().then(() => storage.seedDatabase());
 
 app.get('/api/status', (req, res) => {
   const dbStatus = getDatabaseStatus();
