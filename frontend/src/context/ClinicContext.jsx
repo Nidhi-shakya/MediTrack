@@ -81,16 +81,17 @@ export const ClinicProvider = ({ children }) => {
   const [publicQueue, setPublicQueue] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [medications, setMedications] = useState([]);
-  const [notificationPermission, setNotificationPermission] = useState(() => {
-    return typeof window !== 'undefined' && 'Notification' in window
-      ? Notification.permission
-      : 'default';
-  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [systemStatus, setSystemStatus] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [notificationPermission, setNotificationPermission] = useState(() => {
+    return typeof window !== 'undefined' && 'Notification' in window
+      ? Notification.permission
+      : 'default';
+  });
 
   const [staffUser, setStaffUser] = useState(() => {
     try {
@@ -120,162 +121,168 @@ export const ClinicProvider = ({ children }) => {
   const handleAuthExpiry = useCallback(() => {
     setStaffUser(null);
     localStorage.removeItem('meditrack_staff');
-    setError('Your session has expired or is invalid. Please sign in again.');
+    setError('Your session has expired. Please sign in again.');
   }, []);
+
+  const request = useCallback(
+    async (path, method = 'GET', body = null, needAuth = false) => {
+      const headers = { 'Content-Type': 'application/json' };
+      if (needAuth && staffUser?.token) {
+        headers['Authorization'] = `Bearer ${staffUser.token}`;
+      }
+
+      const res = await fetch(`${BASE_URL}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : null,
+      });
+
+      if (res.status === 401 && needAuth) {
+        handleAuthExpiry();
+        throw new Error('Unauthorized');
+      }
+
+      const json = await res.json();
+      if (!res.ok || json.success === false) {
+        throw new Error(json.message || json.error || 'Request failed');
+      }
+      return json;
+    },
+    [staffUser, handleAuthExpiry]
+  );
 
   const fetchPublicQueue = useCallback(async () => {
     try {
-      const response = await fetch(`${BASE_URL}/patients/public-queue`);
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          setPublicQueue(result.data);
-        }
-      }
+      const res = await fetch(`${BASE_URL}/patients/public-queue`);
+      const json = await res.json();
+      if (json.success) setPublicQueue(json.data);
     } catch (err) {
-      console.warn('Public queue fetch warning:', err.message);
+      console.warn('Queue fetch:', err.message);
     }
   }, []);
 
   const fetchPatients = useCallback(async () => {
-    if (!staffUser || !staffUser.token) {
-      return;
-    }
-
-    setLoading(true);
+    if (!staffUser?.token) return;
     try {
-      const response = await fetch(`${BASE_URL}/patients`, {
-        headers: {
-          'Authorization': `Bearer ${staffUser.token}`,
-        },
-      });
-
-      if (response.status === 401) {
-        handleAuthExpiry();
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(`Server returned HTTP ${response.status}`);
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        setPatients(result.data);
-      }
+      const json = await request('/patients', 'GET', null, true);
+      if (json.success) setPatients(json.data);
     } catch (err) {
-      console.error('[Requirement 5: Frontend Error Handling]', err);
-      setError(err.message || 'Error fetching staff patient list.');
-    } finally {
-      setLoading(false);
+      if (err.message !== 'Unauthorized') setError(err.message);
     }
-  }, [staffUser, handleAuthExpiry]);
+  }, [staffUser, request]);
 
   const fetchPrescriptions = useCallback(async () => {
-    if (!staffUser || !staffUser.token) {
-      return;
-    }
-
+    if (!staffUser?.token) return;
     try {
-      const response = await fetch(`${BASE_URL}/prescriptions`, {
-        headers: {
-          'Authorization': `Bearer ${staffUser.token}`,
-        },
-      });
-
-      if (response.status === 401) {
-        handleAuthExpiry();
-        return;
-      }
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) setPrescriptions(result.data);
-      }
-    } catch (err) {
-      console.warn('Prescriptions fetch warning:', err.message);
+      const json = await request('/prescriptions', 'GET', null, true);
+      if (json.success) setPrescriptions(json.data);
+    } catch {
     }
-  }, [staffUser, handleAuthExpiry]);
+  }, [staffUser, request]);
+
+  const fetchMedications = useCallback(async (filters = {}) => {
+    try {
+      const params = new URLSearchParams();
+      if (filters.status && filters.status !== 'all') params.append('status', filters.status);
+      if (filters.search) params.append('search', filters.search);
+      const q = params.toString() ? `?${params.toString()}` : '';
+      const res = await fetch(`${BASE_URL}/medications${q}`);
+      const json = await res.json();
+      if (json.success) setMedications(json.data);
+    } catch (err) {
+      console.warn('Medications fetch:', err.message);
+    }
+  }, []);
 
   const fetchStatus = useCallback(async () => {
     try {
-      const response = await fetch(`${BASE_URL}/status`);
-      if (response.ok) {
-        const result = await response.json();
-        setSystemStatus(result);
-      }
+      const res = await fetch(`${BASE_URL}/status`);
+      const json = await res.json();
+      setSystemStatus(json);
     } catch {
     }
   }, []);
 
   useEffect(() => {
+    fetchPublicQueue();
+    fetchStatus();
+    fetchMedications();
+
+    if (staffUser?.token) {
+      fetchPatients();
+      fetchPrescriptions();
+    }
+
     let socket = null;
     try {
       socket = io(window.location.origin, {
         transports: ['websocket', 'polling'],
         reconnectionAttempts: 5,
-        reconnectionDelay: 2000,
       });
 
       socket.on('queue:updated', () => {
         fetchPublicQueue();
-        if (staffUser && staffUser.token) {
+        if (staffUser?.token) {
           fetchPatients();
           fetchPrescriptions();
         }
       });
     } catch (e) {
-      console.warn('Socket.IO connection notice:', e.message);
-    }
-
-    return () => {
-      if (socket) socket.disconnect();
-    };
-  }, [staffUser, fetchPublicQueue, fetchPatients, fetchPrescriptions]);
-
-  useEffect(() => {
-    fetchPublicQueue();
-    fetchStatus();
-
-    if (staffUser && staffUser.token) {
-      fetchPatients();
-      fetchPrescriptions();
+      console.warn('Socket note:', e.message);
     }
 
     const interval = setInterval(() => {
       fetchPublicQueue();
-      if (staffUser && staffUser.token) {
-        fetchPatients();
-      }
+      if (staffUser?.token) fetchPatients();
     }, 15000);
 
-    return () => clearInterval(interval);
-  }, [staffUser, fetchPublicQueue, fetchPatients, fetchPrescriptions, fetchStatus]);
+    return () => {
+      clearInterval(interval);
+      if (socket) socket.disconnect();
+    };
+  }, [staffUser, fetchPublicQueue, fetchPatients, fetchPrescriptions, fetchMedications, fetchStatus]);
 
-  const bookPatient = async (patientFormData) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`${BASE_URL}/patients`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(patientFormData),
+  useEffect(() => {
+    const notified = new Set();
+    const interval = setInterval(() => {
+      if (!medications.length) return;
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const dateStr = now.toISOString().split('T')[0];
+
+      medications.forEach((med) => {
+        if (med.status !== 'active') return;
+        if (!Array.isArray(med.times) || !med.times.includes(timeStr)) return;
+
+        const key = `${med._id}_${dateStr}_${timeStr}`;
+        if (notified.has(key)) return;
+
+        const alreadyLogged = Array.isArray(med.logs) && med.logs.some((l) => l.date === dateStr && l.time === timeStr);
+        if (alreadyLogged) return;
+
+        notified.add(key);
+
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+          new Notification(`Medicine Reminder: ${med.name}`, {
+            body: `Scheduled: ${med.dosage} (${med.instructions || 'Take as advised'})`,
+            icon: '/favicon.ico',
+          });
+        }
+        setSuccessMessage(`🔔 Reminder: Time to take ${med.name} (${med.dosage})`);
       });
+    }, 20000);
 
-      const result = await response.json();
+    return () => clearInterval(interval);
+  }, [medications]);
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Registration failed');
-      }
-
-      setSuccessMessage(result.message);
+  const bookPatient = async (formData) => {
+    setLoading(true);
+    try {
+      const res = await request('/patients', 'POST', formData, false);
+      setSuccessMessage(res.message);
       await fetchPublicQueue();
-      if (staffUser && staffUser.token) {
-        await fetchPatients();
-      }
-      return { success: true, data: result.data, triage: result.triage };
+      if (staffUser?.token) await fetchPatients();
+      return { success: true, data: res.data, triage: res.triage };
     } catch (err) {
       setError(err.message);
       return { success: false, message: err.message };
@@ -284,35 +291,10 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  const updatePatientStatus = async (patientId, newStatus) => {
-    if (!staffUser || !staffUser.token) {
-      setError('Staff login required to change patient status.');
-      return false;
-    }
-
-    setError(null);
+  const updatePatientStatus = async (id, status) => {
     try {
-      const response = await fetch(`${BASE_URL}/patients/${patientId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${staffUser.token}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.status === 401) {
-        handleAuthExpiry();
-        return false;
-      }
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to update status');
-      }
-
-      setSuccessMessage(result.message);
+      const res = await request(`/patients/${id}`, 'PUT', { status }, true);
+      setSuccessMessage(res.message);
       await fetchPatients();
       await fetchPublicQueue();
       return true;
@@ -322,36 +304,10 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  const deletePatient = async (patientId) => {
-    if (!staffUser || !staffUser.token) {
-      setError('Staff login required.');
-      return false;
-    }
-
-    if (!window.confirm('Are you sure you want to delete this patient record?')) {
-      return false;
-    }
-
-    setError(null);
+  const deletePatient = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this patient record?')) return false;
     try {
-      const response = await fetch(`${BASE_URL}/patients/${patientId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${staffUser.token}`,
-        },
-      });
-
-      if (response.status === 401) {
-        handleAuthExpiry();
-        return false;
-      }
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to delete record');
-      }
-
+      await request(`/patients/${id}`, 'DELETE', null, true);
       setSuccessMessage('Patient record successfully removed.');
       await fetchPatients();
       await fetchPublicQueue();
@@ -363,37 +319,30 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const callNextPatient = async () => {
-    if (!staffUser || !staffUser.token) {
-      setError('Staff login required.');
-      return { success: false, message: 'Authentication required' };
-    }
-
     setLoading(true);
-    setError(null);
     try {
-      const response = await fetch(`${BASE_URL}/patients/call-next`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${staffUser.token}`,
-        },
-      });
+      const res = await request('/patients/call-next', 'POST', {}, true);
+      setSuccessMessage(res.message);
+      await fetchPatients();
+      await fetchPublicQueue();
+      return { success: true, patient: res.data };
+    } catch (err) {
+      setError(err.message || 'No patients currently waiting.');
+      return { success: false, message: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      if (response.status === 401) {
-        handleAuthExpiry();
-        return { success: false, message: 'Session expired' };
-      }
-
-      const result = await response.json();
-      if (result.success && result.data) {
-        setSuccessMessage(result.message);
-        await fetchPatients();
-        await fetchPublicQueue();
-        return { success: true, patient: result.data };
-      } else {
-        setError(result.message || 'No patients currently waiting in queue.');
-        return { success: false, message: result.message };
-      }
+  const savePrescription = async (data) => {
+    setLoading(true);
+    try {
+      const res = await request('/prescriptions', 'POST', data, true);
+      setSuccessMessage(res.message);
+      await fetchPatients();
+      await fetchPublicQueue();
+      await fetchPrescriptions();
+      return { success: true, data: res.data };
     } catch (err) {
       setError(err.message);
       return { success: false, message: err.message };
@@ -403,95 +352,30 @@ export const ClinicProvider = ({ children }) => {
   };
 
   const fetchPrescriptionHistory = async (patientId) => {
-    if (!staffUser || !staffUser.token || !patientId) return [];
+    if (!patientId || !staffUser?.token) return [];
     try {
-      const response = await fetch(`${BASE_URL}/prescriptions/patient/${patientId}`, {
-        headers: {
-          'Authorization': `Bearer ${staffUser.token}`,
-        },
-      });
-      if (response.ok) {
-        const result = await response.json();
-        return result.data || [];
-      }
-    } catch (err) {
-      console.warn('Prescription history lookup warning:', err.message);
-    }
-    return [];
-  };
-
-  const savePrescription = async (prescriptionData) => {
-    if (!staffUser || !staffUser.token) {
-      setError('Doctor authentication required.');
-      return { success: false, message: 'Authentication required' };
-    }
-
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`${BASE_URL}/prescriptions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${staffUser.token}`,
-        },
-        body: JSON.stringify(prescriptionData),
-      });
-
-      if (response.status === 401) {
-        handleAuthExpiry();
-        return { success: false, message: 'Session expired' };
-      }
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to save prescription');
-      }
-
-      setSuccessMessage(result.message);
-      await fetchPatients();
-      await fetchPublicQueue();
-      await fetchPrescriptions();
-      return { success: true, data: result.data };
-    } catch (err) {
-      setError(err.message);
-      return { success: false, message: err.message };
-    } finally {
-      setLoading(false);
+      const res = await request(`/prescriptions/patient/${patientId}`, 'GET', null, true);
+      return res.data || [];
+    } catch {
+      return [];
     }
   };
 
   const loginStaff = async (pin, role) => {
-    setError(null);
     setLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ pin, role }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Authentication failed');
-      }
-
-      const userData = {
-        id: result.user.id,
-        role: result.user.role,
-        name: result.user.name,
-        username: result.user.username,
-        token: result.token,
+      const res = await request('/auth/login', 'POST', { pin, role }, false);
+      const user = {
+        id: res.user.id,
+        role: res.user.role,
+        name: res.user.name,
+        username: res.user.username,
+        token: res.token,
       };
-
-      setStaffUser(userData);
-      localStorage.setItem('meditrack_staff', JSON.stringify(userData));
-      setSuccessMessage(`Welcome back, ${userData.name}!`);
-      return { success: true, user: userData };
+      setStaffUser(user);
+      localStorage.setItem('meditrack_staff', JSON.stringify(user));
+      setSuccessMessage(`Welcome back, ${user.name}!`);
+      return { success: true, user };
     } catch (err) {
       setError(err.message);
       return { success: false, message: err.message };
@@ -506,199 +390,81 @@ export const ClinicProvider = ({ children }) => {
     setSuccessMessage('Signed out successfully.');
   };
 
-  const requestNotificationPermission = async () => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      try {
-        const perm = await Notification.requestPermission();
-        setNotificationPermission(perm);
-        if (perm === 'granted') {
-          setSuccessMessage('Browser notifications enabled for medicine reminders.');
-        } else {
-          setError('Browser notification permission was not granted.');
-        }
-        return perm;
-      } catch (err) {
-        console.warn('Notification permission error:', err);
-      }
-    }
-    return 'denied';
-  };
-
-  const fetchMedications = useCallback(async (filters = {}) => {
+  const addMedication = async (data) => {
     try {
-      const params = new URLSearchParams();
-      if (filters.status && filters.status !== 'all') params.append('status', filters.status);
-      if (filters.search) params.append('search', filters.search);
-
-      const url = `${BASE_URL}/medications${params.toString() ? '?' + params.toString() : ''}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success) {
-          setMedications(json.data);
-        }
-      }
-    } catch (err) {
-      console.warn('Error fetching medications:', err.message);
-    }
-  }, []);
-
-  const addMedication = async (medData) => {
-    try {
-      setLoading(true);
-      const res = await fetch(`${BASE_URL}/medications`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(medData),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || 'Failed to add medication');
-      }
+      const res = await request('/medications', 'POST', data, false);
       setSuccessMessage('Medication schedule added successfully.');
       await fetchMedications();
-      return { success: true, data: json.data };
+      return { success: true, data: res.data };
     } catch (err) {
       setError(err.message);
       return { success: false, error: err.message };
-    } finally {
-      setLoading(false);
     }
   };
 
-  const updateMedication = async (id, updateData) => {
+  const updateMedication = async (id, data) => {
     try {
-      setLoading(true);
-      const res = await fetch(`${BASE_URL}/medications/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || 'Failed to update medication');
-      }
+      const res = await request(`/medications/${id}`, 'PUT', data, false);
       setSuccessMessage('Medication updated successfully.');
       await fetchMedications();
-      return { success: true, data: json.data };
+      return { success: true, data: res.data };
     } catch (err) {
       setError(err.message);
       return { success: false, error: err.message };
-    } finally {
-      setLoading(false);
     }
   };
 
   const deleteMedication = async (id) => {
     try {
-      setLoading(true);
-      const res = await fetch(`${BASE_URL}/medications/${id}`, {
-        method: 'DELETE',
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || 'Failed to delete medication');
-      }
+      await request(`/medications/${id}`, 'DELETE', null, false);
       setSuccessMessage('Medication removed from reminder schedule.');
       await fetchMedications();
       return { success: true };
     } catch (err) {
       setError(err.message);
       return { success: false, error: err.message };
-    } finally {
-      setLoading(false);
     }
   };
 
-  const logMedicationDose = async (id, { date, time, status }) => {
+  const logMedicationDose = async (id, doseInfo) => {
     try {
-      const res = await fetch(`${BASE_URL}/medications/${id}/dose`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, time, status }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || 'Failed to record dose');
-      }
-      setSuccessMessage(`Dose marked as ${status}.`);
+      const res = await request(`/medications/${id}/dose`, 'POST', doseInfo, false);
+      setSuccessMessage(`Dose marked as ${doseInfo.status}.`);
       await fetchMedications();
-      return { success: true, data: json.data };
+      return { success: true, data: res.data };
     } catch (err) {
       setError(err.message);
       return { success: false, error: err.message };
     }
   };
 
-  useEffect(() => {
-    fetchMedications();
-  }, [fetchMedications]);
-
-  useEffect(() => {
-    const notifiedMap = new Set();
-
-    const interval = setInterval(() => {
-      if (!medications || medications.length === 0) return;
-
-      const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const currentTime = `${hours}:${minutes}`;
-      const todayStr = now.toISOString().split('T')[0];
-
-      medications.forEach((med) => {
-        if (med.status !== 'active') return;
-        if (!Array.isArray(med.times) || !med.times.includes(currentTime)) return;
-
-        const key = `${med._id}_${todayStr}_${currentTime}`;
-        if (notifiedMap.has(key)) return;
-
-        const alreadyLogged =
-          Array.isArray(med.logs) &&
-          med.logs.some((l) => l.date === todayStr && l.time === currentTime);
-        if (alreadyLogged) return;
-
-        notifiedMap.add(key);
-
-        if (
-          typeof window !== 'undefined' &&
-          'Notification' in window &&
-          Notification.permission === 'granted'
-        ) {
-          try {
-            new Notification(`Medicine Reminder: ${med.name}`, {
-              body: `Scheduled Dose: ${med.dosage} (${med.instructions || 'Take as advised'})`,
-              icon: '/favicon.ico',
-            });
-          } catch (e) {
-            console.warn('Browser notification error:', e);
-          }
-        }
-
-        setSuccessMessage(`🔔 Reminder: Time to take ${med.name} (${med.dosage})`);
-      });
-    }, 20000);
-
-    return () => clearInterval(interval);
-  }, [medications]);
+  const requestNotificationPermission = async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      const perm = await Notification.requestPermission();
+      setNotificationPermission(perm);
+      if (perm === 'granted') {
+        setSuccessMessage('Browser notifications enabled.');
+      }
+      return perm;
+    }
+    return 'denied';
+  };
 
   const stats = useMemo(() => {
-    const listToCount = staffUser ? patients : publicQueue;
-    const waitingList = listToCount.filter((p) => p.status === 'Waiting');
-    const inConsultationList = listToCount.filter((p) => p.status === 'In-Consultation');
-    const completedList = listToCount.filter((p) => p.status === 'Completed');
-    const highPriorityList = waitingList.filter((p) => p.priority === 'High');
-
-    const estimatedWaitTimeMinutes = waitingList.length * 10;
+    const list = staffUser ? patients : publicQueue;
+    const waiting = list.filter((p) => p.status === 'Waiting');
+    const inConsult = list.filter((p) => p.status === 'In-Consultation');
+    const completed = list.filter((p) => p.status === 'Completed');
+    const high = waiting.filter((p) => p.priority === 'High');
 
     return {
-      totalWaiting: waitingList.length,
-      waitingCount: waitingList.length,
-      highPriorityCount: highPriorityList.length,
-      emergencyCount: highPriorityList.length,
-      inConsultationCount: inConsultationList.length,
-      completedToday: completedList.length,
-      estimatedWaitTimeMinutes,
+      totalWaiting: waiting.length,
+      waitingCount: waiting.length,
+      highPriorityCount: high.length,
+      emergencyCount: high.length,
+      inConsultationCount: inConsult.length,
+      completedToday: completed.length,
+      estimatedWaitTimeMinutes: waiting.length * 10,
     };
   }, [staffUser, patients, publicQueue]);
 
@@ -721,6 +487,7 @@ export const ClinicProvider = ({ children }) => {
         filteredPatients,
         publicQueue,
         prescriptions,
+        medications,
         loading,
         error,
         setError,
@@ -736,6 +503,7 @@ export const ClinicProvider = ({ children }) => {
         stats,
         fetchPatients,
         fetchPublicQueue,
+        fetchMedications,
         bookPatient,
         updatePatientStatus,
         deletePatient,
@@ -744,8 +512,6 @@ export const ClinicProvider = ({ children }) => {
         fetchPrescriptionHistory,
         loginStaff,
         logoutStaff,
-        medications,
-        fetchMedications,
         addMedication,
         updateMedication,
         deleteMedication,

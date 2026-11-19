@@ -5,7 +5,7 @@ const Staff = require('../models/Staff');
 const Medication = require('../models/Medication');
 const { getDatabaseStatus } = require('../config/db');
 
-const DEFAULT_HASH_1234 = bcrypt.hashSync('1234', 10);
+const DEFAULT_HASH = bcrypt.hashSync('1234', 10);
 
 const initialStaff = [
   {
@@ -15,7 +15,7 @@ const initialStaff = [
     role: 'reception',
     passwordHash: process.env.RECEPTION_PIN
       ? bcrypt.hashSync(process.env.RECEPTION_PIN, 10)
-      : DEFAULT_HASH_1234,
+      : DEFAULT_HASH,
     isActive: true,
   },
   {
@@ -25,10 +25,13 @@ const initialStaff = [
     role: 'doctor',
     passwordHash: process.env.DOCTOR_PIN
       ? bcrypt.hashSync(process.env.DOCTOR_PIN, 10)
-      : DEFAULT_HASH_1234,
+      : DEFAULT_HASH,
     isActive: true,
   },
 ];
+
+const now = Date.now();
+const oneDay = 24 * 60 * 60 * 1000;
 
 const initialPatients = [
   {
@@ -44,8 +47,8 @@ const initialPatients = [
     riskScore: 85,
     status: 'Waiting',
     prescription: null,
-    createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+    createdAt: new Date(now - 45 * 60 * 1000).toISOString(),
+    updatedAt: new Date(now - 45 * 60 * 1000).toISOString(),
   },
   {
     _id: '65f1a101b1c2d3e4f5a00102',
@@ -60,8 +63,8 @@ const initialPatients = [
     riskScore: 50,
     status: 'Waiting',
     prescription: null,
-    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    createdAt: new Date(now - 30 * 60 * 1000).toISOString(),
+    updatedAt: new Date(now - 30 * 60 * 1000).toISOString(),
   },
   {
     _id: '65f1a101b1c2d3e4f5a00103',
@@ -76,8 +79,8 @@ const initialPatients = [
     riskScore: 15,
     status: 'In-Consultation',
     prescription: null,
-    createdAt: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
+    createdAt: new Date(now - 20 * 60 * 1000).toISOString(),
+    updatedAt: new Date(now - 20 * 60 * 1000).toISOString(),
   },
   {
     _id: '65f1a101b1c2d3e4f5a00104',
@@ -92,17 +95,10 @@ const initialPatients = [
     riskScore: 15,
     status: 'Waiting',
     prescription: null,
-    createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    createdAt: new Date(now - 10 * 60 * 1000).toISOString(),
+    updatedAt: new Date(now - 10 * 60 * 1000).toISOString(),
   },
 ];
-
-let inMemoryPatients = JSON.parse(JSON.stringify(initialPatients));
-let inMemoryPrescriptions = [];
-let inMemoryStaff = JSON.parse(JSON.stringify(initialStaff));
-
-const nowMs = Date.now();
-const dayMs = 24 * 60 * 60 * 1000;
 
 const initialMedications = [
   {
@@ -111,22 +107,13 @@ const initialMedications = [
     dosage: '500 mg',
     frequency: 'Twice Daily',
     times: ['08:00', '20:00'],
-    startDate: new Date(nowMs - 2 * dayMs).toISOString(),
-    endDate: new Date(nowMs + 3 * dayMs).toISOString(),
+    startDate: new Date(now - 2 * oneDay).toISOString(),
+    endDate: new Date(now + 3 * oneDay).toISOString(),
     instructions: 'Take 1 tablet after meals with water.',
     status: 'active',
-    patientName: 'Self',
-    patientId: null,
-    logs: [
-      {
-        date: new Date().toISOString().split('T')[0],
-        time: '08:00',
-        status: 'Taken',
-        recordedAt: new Date(nowMs - 4 * 60 * 60 * 1000),
-      },
-    ],
-    createdAt: new Date(nowMs - 2 * dayMs).toISOString(),
-    updatedAt: new Date(nowMs - 2 * dayMs).toISOString(),
+    logs: [{ date: new Date().toISOString().split('T')[0], time: '08:00', status: 'Taken' }],
+    createdAt: new Date(now - 2 * oneDay).toISOString(),
+    updatedAt: new Date(now - 2 * oneDay).toISOString(),
   },
   {
     _id: '65f1b201a1b2c3d4e5f00202',
@@ -134,15 +121,13 @@ const initialMedications = [
     dosage: '250 mg',
     frequency: 'Thrice Daily',
     times: ['08:00', '14:00', '20:00'],
-    startDate: new Date(nowMs - 1 * dayMs).toISOString(),
-    endDate: new Date(nowMs + 5 * dayMs).toISOString(),
-    instructions: 'Complete full 5-day antibiotic course as advised.',
+    startDate: new Date(now - 1 * oneDay).toISOString(),
+    endDate: new Date(now + 5 * oneDay).toISOString(),
+    instructions: 'Complete full 5-day antibiotic course.',
     status: 'active',
-    patientName: 'Self',
-    patientId: null,
     logs: [],
-    createdAt: new Date(nowMs - 1 * dayMs).toISOString(),
-    updatedAt: new Date(nowMs - 1 * dayMs).toISOString(),
+    createdAt: new Date(now - 1 * oneDay).toISOString(),
+    updatedAt: new Date(now - 1 * oneDay).toISOString(),
   },
   {
     _id: '65f1b201a1b2c3d4e5f00203',
@@ -150,22 +135,13 @@ const initialMedications = [
     dosage: '1 Capsule',
     frequency: 'Once Daily',
     times: ['09:00'],
-    startDate: new Date(nowMs - 5 * dayMs).toISOString(),
-    endDate: new Date(nowMs + 25 * dayMs).toISOString(),
-    instructions: 'Take in the morning with a glass of water after breakfast.',
+    startDate: new Date(now - 5 * oneDay).toISOString(),
+    endDate: new Date(now + 25 * oneDay).toISOString(),
+    instructions: 'Take in morning with breakfast.',
     status: 'active',
-    patientName: 'Self',
-    patientId: null,
-    logs: [
-      {
-        date: new Date().toISOString().split('T')[0],
-        time: '09:00',
-        status: 'Taken',
-        recordedAt: new Date(nowMs - 3 * 60 * 60 * 1000),
-      },
-    ],
-    createdAt: new Date(nowMs - 5 * dayMs).toISOString(),
-    updatedAt: new Date(nowMs - 5 * dayMs).toISOString(),
+    logs: [{ date: new Date().toISOString().split('T')[0], time: '09:00', status: 'Taken' }],
+    createdAt: new Date(now - 5 * oneDay).toISOString(),
+    updatedAt: new Date(now - 5 * oneDay).toISOString(),
   },
   {
     _id: '65f1b201a1b2c3d4e5f00204',
@@ -173,31 +149,20 @@ const initialMedications = [
     dosage: '10 mg',
     frequency: 'Once Daily',
     times: ['21:00'],
-    startDate: new Date(nowMs - 10 * dayMs).toISOString(),
-    endDate: new Date(nowMs - 1 * dayMs).toISOString(),
-    instructions: 'Take at night before sleep for seasonal allergy relief.',
+    startDate: new Date(now - 10 * oneDay).toISOString(),
+    endDate: new Date(now - 1 * oneDay).toISOString(),
+    instructions: 'Take at night before sleep.',
     status: 'expired',
-    patientName: 'Self',
-    patientId: null,
     logs: [],
-    createdAt: new Date(nowMs - 10 * dayMs).toISOString(),
-    updatedAt: new Date(nowMs - 1 * dayMs).toISOString(),
+    createdAt: new Date(now - 10 * oneDay).toISOString(),
+    updatedAt: new Date(now - 1 * oneDay).toISOString(),
   },
 ];
 
+let inMemoryPatients = JSON.parse(JSON.stringify(initialPatients));
+let inMemoryPrescriptions = [];
+let inMemoryStaff = JSON.parse(JSON.stringify(initialStaff));
 let inMemoryMedications = JSON.parse(JSON.stringify(initialMedications));
-
-const computeMedStatus = (med) => {
-  if (med.status === 'completed') return 'completed';
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end = new Date(med.endDate);
-  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-  if (today > endDay) {
-    return 'expired';
-  }
-  return 'active';
-};
 
 let ioInstance = null;
 
@@ -214,7 +179,7 @@ const broadcastQueueUpdate = (action, data = null) => {
         timestamp: new Date().toISOString(),
       });
     } catch (err) {
-      console.warn('Socket.IO broadcast warning:', err.message);
+      console.warn('Socket emit error:', err.message);
     }
   }
 };
@@ -223,64 +188,60 @@ const maskPatientName = (fullName) => {
   if (!fullName) return 'Patient';
   const parts = fullName.trim().split(' ');
   if (parts.length === 1) return parts[0];
-  const firstName = parts[0];
-  const lastInitial = parts[parts.length - 1][0] || '';
-  return `${firstName} ${lastInitial}.`;
+  return `${parts[0]} ${parts[parts.length - 1][0] || ''}.`;
 };
 
-const generateNextTokenNumber = async () => {
-  let existingTokens = [];
-  const dbStatus = getDatabaseStatus();
+const computeMedStatus = (med) => {
+  if (med.status === 'completed') return 'completed';
+  const today = new Date().toISOString().split('T')[0];
+  const end = new Date(med.endDate).toISOString().split('T')[0];
+  return today > end ? 'expired' : 'active';
+};
 
-  if (dbStatus.isConnected) {
+const sortQueue = (patients) => {
+  const weight = { High: 3, Medium: 2, Normal: 1 };
+  return [...patients].sort((a, b) => {
+    if (a.status === 'In-Consultation' && b.status !== 'In-Consultation') return -1;
+    if (b.status === 'In-Consultation' && a.status !== 'In-Consultation') return 1;
+    if (a.status === 'Waiting' && b.status === 'Completed') return -1;
+    if (b.status === 'Waiting' && a.status === 'Completed') return 1;
+    if (a.status === 'Waiting' && b.status === 'Waiting') {
+      const diff = (weight[b.priority] || 1) - (weight[a.priority] || 1);
+      if (diff !== 0) return diff;
+      return new Date(a.createdAt) - new Date(b.createdAt);
+    }
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+};
+
+const generateNextToken = async () => {
+  let tokens = [];
+  if (getDatabaseStatus().isConnected) {
     const list = await Patient.find({}, 'tokenNumber').lean();
-    existingTokens = list.map((p) => p.tokenNumber);
+    tokens = list.map((p) => p.tokenNumber);
   } else {
-    existingTokens = inMemoryPatients.map((p) => p.tokenNumber);
+    tokens = inMemoryPatients.map((p) => p.tokenNumber);
   }
-
-  const numbers = existingTokens
+  const nums = tokens
     .map((t) => {
       const match = (t || '').match(/\d+/);
       return match ? parseInt(match[0], 10) : 100;
     })
     .filter((n) => !isNaN(n));
-
-  const maxNum = numbers.length > 0 ? Math.max(...numbers) : 100;
-  return `T-${maxNum + 1}`;
-};
-
-const sortQueue = (patients) => {
-  const priorityWeight = { High: 3, Medium: 2, Normal: 1 };
-
-  return [...patients].sort((a, b) => {
-    if (a.status === 'In-Consultation' && b.status !== 'In-Consultation') return -1;
-    if (b.status === 'In-Consultation' && a.status !== 'In-Consultation') return 1;
-
-    if (a.status === 'Waiting' && b.status === 'Completed') return -1;
-    if (b.status === 'Waiting' && a.status === 'Completed') return 1;
-
-    if (a.status === 'Waiting' && b.status === 'Waiting') {
-      const weightA = priorityWeight[a.priority] || 1;
-      const weightB = priorityWeight[b.priority] || 1;
-      if (weightB !== weightA) return weightB - weightA;
-      return new Date(a.createdAt) - new Date(b.createdAt);
-    }
-
-    return new Date(b.createdAt) - new Date(a.createdAt);
-  });
+  const max = nums.length > 0 ? Math.max(...nums) : 100;
+  return `T-${max + 1}`;
 };
 
 module.exports = {
   setSocketIO,
   broadcastQueueUpdate,
+  maskPatientName,
 
-  getPatients: async (filterOptions = {}) => {
-    const { search, status, page, limit } = filterOptions;
-    const dbStatus = getDatabaseStatus();
+  getPatients: async (options = {}) => {
+    const { search, status, page, limit } = options;
     let list = [];
 
-    if (dbStatus.isConnected) {
+    if (getDatabaseStatus().isConnected) {
       const query = {};
       if (status) query.status = status;
       if (search && search.trim()) {
@@ -290,16 +251,14 @@ module.exports = {
       list = await Patient.find(query).populate('prescription').lean();
     } else {
       list = inMemoryPatients;
-      if (status) {
-        list = list.filter((p) => p.status === status);
-      }
+      if (status) list = list.filter((p) => p.status === status);
       if (search && search.trim()) {
-        const queryTerm = search.trim().toLowerCase();
+        const q = search.trim().toLowerCase();
         list = list.filter(
           (p) =>
-            (p.name && p.name.toLowerCase().includes(queryTerm)) ||
-            (p.tokenNumber && p.tokenNumber.toLowerCase().includes(queryTerm)) ||
-            (p.phone && p.phone.includes(queryTerm))
+            (p.name && p.name.toLowerCase().includes(q)) ||
+            (p.tokenNumber && p.tokenNumber.toLowerCase().includes(q)) ||
+            (p.phone && p.phone.includes(q))
         );
       }
     }
@@ -309,11 +268,9 @@ module.exports = {
     if (page && limit) {
       const pageNum = Math.max(1, parseInt(page, 10));
       const limitNum = Math.max(1, parseInt(limit, 10));
-      const startIndex = (pageNum - 1) * limitNum;
-      const paginatedItems = sorted.slice(startIndex, startIndex + limitNum);
-
+      const start = (pageNum - 1) * limitNum;
       return {
-        data: paginatedItems,
+        data: sorted.slice(start, start + limitNum),
         pagination: {
           total: sorted.length,
           page: pageNum,
@@ -322,158 +279,167 @@ module.exports = {
         },
       };
     }
-
     return sorted;
   },
 
-  getPatientById: async (id) => {
-    const dbStatus = getDatabaseStatus();
-    if (dbStatus.isConnected) {
-      return Patient.findById(id).populate('prescription');
+  getPublicQueue: async () => {
+    let list = [];
+    if (getDatabaseStatus().isConnected) {
+      list = await Patient.find({}, 'tokenNumber name priority status createdAt').lean();
+    } else {
+      list = inMemoryPatients.map((p) => ({
+        tokenNumber: p.tokenNumber,
+        name: p.name,
+        priority: p.priority,
+        status: p.status,
+        createdAt: p.createdAt,
+      }));
     }
-    return inMemoryPatients.find((p) => String(p._id) === String(id)) || null;
+
+    const sorted = sortQueue(list);
+    return sorted.map((p, idx) => ({
+      tokenNumber: p.tokenNumber,
+      displayName: maskPatientName(p.name),
+      priority: p.priority,
+      status: p.status,
+      queuePosition: p.status === 'Waiting' ? idx + 1 : null,
+      estimatedWaitMinutes: p.status === 'Waiting' ? (idx + 1) * 10 : 0,
+      registeredAt: p.createdAt,
+    }));
+  },
+
+  getPatientById: async (id) => {
+    if (getDatabaseStatus().isConnected) {
+      return Patient.findById(id).populate('prescription').lean();
+    }
+    const found = inMemoryPatients.find((p) => String(p._id) === String(id));
+    if (!found) return null;
+    const copy = { ...found };
+    if (copy.prescription) {
+      copy.prescription =
+        inMemoryPrescriptions.find((rx) => String(rx._id) === String(copy.prescription)) ||
+        copy.prescription;
+    }
+    return copy;
   },
 
   createPatient: async (patientData) => {
-    const tokenNumber = await generateNextTokenNumber();
-    const dbStatus = getDatabaseStatus();
-    let saved;
+    const tokenNumber = await generateNextToken();
+    const payload = {
+      ...patientData,
+      tokenNumber,
+      status: 'Waiting',
+      prescription: null,
+    };
 
-    if (dbStatus.isConnected) {
-      const newPatient = new Patient({
-        ...patientData,
-        tokenNumber,
-        status: 'Waiting',
-      });
-      saved = await newPatient.save();
-    } else {
-      saved = {
-        _id: 'mem_' + Date.now() + Math.random().toString(36).substr(2, 4),
-        ...patientData,
-        tokenNumber,
-        status: 'Waiting',
-        prescription: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      inMemoryPatients.push(saved);
+    if (getDatabaseStatus().isConnected) {
+      const doc = new Patient(payload);
+      const saved = await doc.save();
+      broadcastQueueUpdate('PATIENT_REGISTERED', saved.toObject());
+      return saved.toObject();
     }
 
-    broadcastQueueUpdate('PATIENT_REGISTERED', saved);
-    return saved;
+    const newPatient = {
+      _id: 'pat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+      ...payload,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    inMemoryPatients.push(newPatient);
+    broadcastQueueUpdate('PATIENT_REGISTERED', newPatient);
+    return newPatient;
   },
 
-  updatePatient: async (id, updateFields) => {
-    const dbStatus = getDatabaseStatus();
-    let updated = null;
-
-    if (dbStatus.isConnected) {
-      updated = await Patient.findByIdAndUpdate(id, updateFields, { new: true });
-    } else {
-      const idx = inMemoryPatients.findIndex((p) => String(p._id) === String(id));
-      if (idx !== -1) {
-        inMemoryPatients[idx] = {
-          ...inMemoryPatients[idx],
-          ...updateFields,
-          updatedAt: new Date().toISOString(),
-        };
-        updated = inMemoryPatients[idx];
-      }
+  updatePatientStatus: async (id, newStatus) => {
+    if (getDatabaseStatus().isConnected) {
+      const updated = await Patient.findByIdAndUpdate(
+        id,
+        { status: newStatus, updatedAt: new Date() },
+        { new: true, runValidators: true }
+      ).lean();
+      if (updated) broadcastQueueUpdate('PATIENT_UPDATED', updated);
+      return updated;
     }
 
-    if (updated) {
-      broadcastQueueUpdate('PATIENT_UPDATED', updated);
-    }
-    return updated;
-  },
-
-  callNextPatient: async () => {
-    const dbStatus = getDatabaseStatus();
-    let nextPatient = null;
-
-    if (dbStatus.isConnected) {
-      const waiting = await Patient.find({ status: 'Waiting' }).lean();
-      if (!waiting || waiting.length === 0) return null;
-      const sorted = sortQueue(waiting);
-      nextPatient = sorted[0];
-
-      if (nextPatient) {
-        const updated = await Patient.findByIdAndUpdate(
-          nextPatient._id,
-          { status: 'In-Consultation' },
-          { new: true }
-        );
-        broadcastQueueUpdate('CALL_NEXT', updated);
-        return updated;
-      }
-    } else {
-      const waiting = inMemoryPatients.filter((p) => p.status === 'Waiting');
-      if (waiting.length === 0) return null;
-      const sorted = sortQueue(waiting);
-      nextPatient = sorted[0];
-
-      if (nextPatient) {
-        const idx = inMemoryPatients.findIndex((p) => String(p._id) === String(nextPatient._id));
-        if (idx !== -1) {
-          inMemoryPatients[idx].status = 'In-Consultation';
-          inMemoryPatients[idx].updatedAt = new Date().toISOString();
-          nextPatient = inMemoryPatients[idx];
-          broadcastQueueUpdate('CALL_NEXT', nextPatient);
-          return nextPatient;
-        }
-      }
-    }
-
-    return null;
+    const idx = inMemoryPatients.findIndex((p) => String(p._id) === String(id));
+    if (idx === -1) return null;
+    inMemoryPatients[idx].status = newStatus;
+    inMemoryPatients[idx].updatedAt = new Date().toISOString();
+    broadcastQueueUpdate('PATIENT_UPDATED', inMemoryPatients[idx]);
+    return inMemoryPatients[idx];
   },
 
   deletePatient: async (id) => {
-    const dbStatus = getDatabaseStatus();
-    let success = false;
-
-    if (dbStatus.isConnected) {
-      const res = await Patient.findByIdAndDelete(id);
-      success = !!res;
-    } else {
-      const initialLen = inMemoryPatients.length;
-      inMemoryPatients = inMemoryPatients.filter((p) => String(p._id) !== String(id));
-      success = inMemoryPatients.length < initialLen;
+    if (getDatabaseStatus().isConnected) {
+      const deleted = await Patient.findByIdAndDelete(id).lean();
+      if (deleted) broadcastQueueUpdate('PATIENT_DELETED', { _id: id });
+      return !!deleted;
     }
 
-    if (success) {
-      broadcastQueueUpdate('PATIENT_DELETED', { id });
-    }
-    return success;
+    const prevLen = inMemoryPatients.length;
+    inMemoryPatients = inMemoryPatients.filter((p) => String(p._id) !== String(id));
+    const wasDeleted = inMemoryPatients.length < prevLen;
+    if (wasDeleted) broadcastQueueUpdate('PATIENT_DELETED', { _id: id });
+    return wasDeleted;
   },
 
-  createPrescription: async (prescriptionData) => {
-    const dbStatus = getDatabaseStatus();
+  callNextPatient: async () => {
+    let list = [];
+    if (getDatabaseStatus().isConnected) {
+      list = await Patient.find({ status: 'Waiting' }).lean();
+    } else {
+      list = inMemoryPatients.filter((p) => p.status === 'Waiting');
+    }
+
+    if (list.length === 0) return null;
+    const sortedWaiting = sortQueue(list);
+    const nextPatient = sortedWaiting[0];
+
+    if (getDatabaseStatus().isConnected) {
+      const updated = await Patient.findByIdAndUpdate(
+        nextPatient._id,
+        { status: 'In-Consultation', updatedAt: new Date() },
+        { new: true }
+      ).lean();
+      broadcastQueueUpdate('PATIENT_CALLED', updated);
+      return updated;
+    }
+
+    const idx = inMemoryPatients.findIndex((p) => String(p._id) === String(nextPatient._id));
+    if (idx !== -1) {
+      inMemoryPatients[idx].status = 'In-Consultation';
+      inMemoryPatients[idx].updatedAt = new Date().toISOString();
+      broadcastQueueUpdate('PATIENT_CALLED', inMemoryPatients[idx]);
+      return inMemoryPatients[idx];
+    }
+    return null;
+  },
+
+  createPrescription: async (rxData) => {
     let savedRx = null;
 
-    if (dbStatus.isConnected) {
-      const newRx = new Prescription(prescriptionData);
-      savedRx = await newRx.save();
-
-      await Patient.findByIdAndUpdate(prescriptionData.patientId, {
+    if (getDatabaseStatus().isConnected) {
+      const doc = new Prescription(rxData);
+      savedRx = await doc.save();
+      savedRx = savedRx.toObject();
+      await Patient.findByIdAndUpdate(rxData.patientId, {
         status: 'Completed',
         prescription: savedRx._id,
+        updatedAt: new Date(),
       });
     } else {
       savedRx = {
-        _id: 'rx_' + Date.now(),
-        ...prescriptionData,
+        _id: 'rx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        ...rxData,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       inMemoryPrescriptions.push(savedRx);
-
-      const idx = inMemoryPatients.findIndex(
-        (p) => String(p._id) === String(prescriptionData.patientId)
-      );
-      if (idx !== -1) {
-        inMemoryPatients[idx].status = 'Completed';
-        inMemoryPatients[idx].prescription = savedRx;
-        inMemoryPatients[idx].updatedAt = new Date().toISOString();
+      const pIdx = inMemoryPatients.findIndex((p) => String(p._id) === String(rxData.patientId));
+      if (pIdx !== -1) {
+        inMemoryPatients[pIdx].status = 'Completed';
+        inMemoryPatients[pIdx].prescription = savedRx._id;
+        inMemoryPatients[pIdx].updatedAt = new Date().toISOString();
       }
     }
 
@@ -482,16 +448,14 @@ module.exports = {
   },
 
   getPrescriptions: async () => {
-    const dbStatus = getDatabaseStatus();
-    if (dbStatus.isConnected) {
+    if (getDatabaseStatus().isConnected) {
       return Prescription.find().sort({ createdAt: -1 }).lean();
     }
     return [...inMemoryPrescriptions].reverse();
   },
 
   getPrescriptionsByPatientId: async (patientId) => {
-    const dbStatus = getDatabaseStatus();
-    if (dbStatus.isConnected) {
+    if (getDatabaseStatus().isConnected) {
       return Prescription.find({ patientId }).sort({ createdAt: -1 }).lean();
     }
     return inMemoryPrescriptions
@@ -500,80 +464,63 @@ module.exports = {
   },
 
   findStaffByUsername: async (username) => {
-    const dbStatus = getDatabaseStatus();
     const cleanUser = String(username).toLowerCase().trim();
-
-    if (dbStatus.isConnected) {
+    if (getDatabaseStatus().isConnected) {
       return Staff.findOne({ username: cleanUser, isActive: true });
     }
     return inMemoryStaff.find((s) => s.username === cleanUser && s.isActive) || null;
   },
 
   findStaffByRole: async (role) => {
-    const dbStatus = getDatabaseStatus();
     const cleanRole = String(role).toLowerCase().trim();
-
-    if (dbStatus.isConnected) {
+    if (getDatabaseStatus().isConnected) {
       return Staff.findOne({ role: cleanRole, isActive: true });
     }
     return inMemoryStaff.find((s) => s.role === cleanRole && s.isActive) || null;
   },
 
-  getMedications: async (filterOptions = {}) => {
-    const { status, search } = filterOptions;
-    const dbStatus = getDatabaseStatus();
+  getMedications: async (options = {}) => {
+    const { status, search } = options;
+    let list = [];
 
-    if (dbStatus.isConnected) {
+    if (getDatabaseStatus().isConnected) {
       const query = {};
-      if (status && status !== 'all') {
-        query.status = status;
-      }
+      if (status && status !== 'all') query.status = status;
       if (search && search.trim()) {
         const regex = new RegExp(search.trim(), 'i');
         query.$or = [{ name: regex }, { instructions: regex }];
       }
-      const list = await Medication.find(query).sort({ createdAt: -1 }).lean();
-      return list.map((m) => ({ ...m, status: computeMedStatus(m) }));
+      list = await Medication.find(query).sort({ createdAt: -1 }).lean();
+    } else {
+      list = inMemoryMedications;
+      if (status && status !== 'all') list = list.filter((m) => m.status === status);
+      if (search && search.trim()) {
+        const q = search.trim().toLowerCase();
+        list = list.filter(
+          (m) =>
+            (m.name && m.name.toLowerCase().includes(q)) ||
+            (m.instructions && m.instructions.toLowerCase().includes(q))
+        );
+      }
     }
 
-    let list = inMemoryMedications.map((m) => ({ ...m, status: computeMedStatus(m) }));
-
-    if (status && status !== 'all') {
-      list = list.filter((m) => m.status === status);
-    }
-    if (search && search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter(
-        (m) =>
-          (m.name && m.name.toLowerCase().includes(q)) ||
-          (m.instructions && m.instructions.toLowerCase().includes(q))
-      );
-    }
-    return list;
+    return list.map((m) => ({ ...m, status: computeMedStatus(m) }));
   },
 
   getMedicationById: async (id) => {
-    const dbStatus = getDatabaseStatus();
-    if (dbStatus.isConnected) {
+    if (getDatabaseStatus().isConnected) {
       const med = await Medication.findById(id).lean();
-      if (!med) return null;
-      return { ...med, status: computeMedStatus(med) };
+      return med ? { ...med, status: computeMedStatus(med) } : null;
     }
     const found = inMemoryMedications.find((m) => String(m._id) === String(id));
-    if (!found) return null;
-    return { ...found, status: computeMedStatus(found) };
+    return found ? { ...found, status: computeMedStatus(found) } : null;
   },
 
   createMedication: async (data) => {
-    const dbStatus = getDatabaseStatus();
-    const calculated = computeMedStatus(data);
-    const payload = {
-      ...data,
-      status: data.status || calculated,
-      logs: data.logs || [],
-    };
+    const status = data.status || computeMedStatus(data);
+    const payload = { ...data, status, logs: data.logs || [] };
 
-    if (dbStatus.isConnected) {
+    if (getDatabaseStatus().isConnected) {
       const doc = new Medication(payload);
       const saved = await doc.save();
       const obj = saved.toObject();
@@ -591,61 +538,48 @@ module.exports = {
   },
 
   updateMedication: async (id, updateData) => {
-    const dbStatus = getDatabaseStatus();
-    if (dbStatus.isConnected) {
+    if (getDatabaseStatus().isConnected) {
       const updated = await Medication.findByIdAndUpdate(
         id,
         { ...updateData, updatedAt: new Date() },
         { new: true, runValidators: true }
       ).lean();
-      if (!updated) return null;
-      return { ...updated, status: computeMedStatus(updated) };
+      return updated ? { ...updated, status: computeMedStatus(updated) } : null;
     }
 
-    const index = inMemoryMedications.findIndex((m) => String(m._id) === String(id));
-    if (index === -1) return null;
-
-    inMemoryMedications[index] = {
-      ...inMemoryMedications[index],
+    const idx = inMemoryMedications.findIndex((m) => String(m._id) === String(id));
+    if (idx === -1) return null;
+    inMemoryMedications[idx] = {
+      ...inMemoryMedications[idx],
       ...updateData,
       updatedAt: new Date().toISOString(),
     };
-    inMemoryMedications[index].status = computeMedStatus(inMemoryMedications[index]);
-    return inMemoryMedications[index];
+    inMemoryMedications[idx].status = computeMedStatus(inMemoryMedications[idx]);
+    return inMemoryMedications[idx];
   },
 
   deleteMedication: async (id) => {
-    const dbStatus = getDatabaseStatus();
-    if (dbStatus.isConnected) {
+    if (getDatabaseStatus().isConnected) {
       const deleted = await Medication.findByIdAndDelete(id).lean();
       return !!deleted;
     }
-
-    const initialLen = inMemoryMedications.length;
+    const prevLen = inMemoryMedications.length;
     inMemoryMedications = inMemoryMedications.filter((m) => String(m._id) !== String(id));
-    return inMemoryMedications.length < initialLen;
+    return inMemoryMedications.length < prevLen;
   },
 
   logMedicationDose: async (id, doseInfo) => {
     const { date, time, status } = doseInfo;
-    const logEntry = {
-      date,
-      time,
-      status,
-      recordedAt: new Date().toISOString(),
-    };
+    const logEntry = { date, time, status, recordedAt: new Date().toISOString() };
 
-    const dbStatus = getDatabaseStatus();
-    if (dbStatus.isConnected) {
+    if (getDatabaseStatus().isConnected) {
       const med = await Medication.findById(id);
       if (!med) return null;
-      if (!Array.isArray(med.logs)) {
-        med.logs = [];
-      }
-      const existingIdx = med.logs.findIndex((l) => l.date === date && l.time === time);
-      if (existingIdx >= 0) {
-        med.logs[existingIdx].status = status;
-        med.logs[existingIdx].recordedAt = new Date();
+      if (!Array.isArray(med.logs)) med.logs = [];
+      const idx = med.logs.findIndex((l) => l.date === date && l.time === time);
+      if (idx >= 0) {
+        med.logs[idx].status = status;
+        med.logs[idx].recordedAt = new Date();
       } else {
         med.logs.push(logEntry);
       }
@@ -656,21 +590,14 @@ module.exports = {
 
     const med = inMemoryMedications.find((m) => String(m._id) === String(id));
     if (!med) return null;
-
-    if (!Array.isArray(med.logs)) {
-      med.logs = [];
-    }
-
-    const existingIdx = med.logs.findIndex((l) => l.date === date && l.time === time);
-    if (existingIdx >= 0) {
-      med.logs[existingIdx] = logEntry;
+    if (!Array.isArray(med.logs)) med.logs = [];
+    const idx = med.logs.findIndex((l) => l.date === date && l.time === time);
+    if (idx >= 0) {
+      med.logs[idx] = logEntry;
     } else {
       med.logs.push(logEntry);
     }
     med.updatedAt = new Date().toISOString();
     return { ...med, status: computeMedStatus(med) };
   },
-
-  maskPatientName,
 };
-
