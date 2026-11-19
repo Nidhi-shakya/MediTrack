@@ -1,8 +1,3 @@
-// ==============================================================================
-// Smart Triage Engine Automated Unit Tests
-// [Requirement 6 & 7: Algorithmic Triage & Decision-Support Tests]
-// ==============================================================================
-
 const { evaluateTriage, TRIAGE_DISCLAIMER, EMERGENCY_NOTICE } = require('../services/triageEngine');
 
 describe('Triage Engine Service (evaluateTriage)', () => {

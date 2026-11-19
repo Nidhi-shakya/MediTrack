@@ -1,8 +1,3 @@
-// [Requirement 1: Multiple React Components]
-// [Requirement 6: Props & State - Child Component Receiving Data via Props]
-// [Requirement 7: Conditional Rendering]
-// frontend/src/components/StatCard.jsx
-
 import React from 'react';
 
 export const StatCard = ({
@@ -13,7 +8,6 @@ export const StatCard = ({
   subtitle,
   badge,
 }) => {
-  // Color configuration map for medical aesthetic
   const colorMap = {
     teal: {
       bg: 'bg-teal-50',
@@ -63,7 +57,6 @@ export const StatCard = ({
               {value}
             </h3>
 
-            {/* [Requirement 7: Conditional Rendering using logical &&] */}
             {badge && (
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${scheme.bg} ${scheme.text}`}>
                 {badge}
@@ -72,7 +65,6 @@ export const StatCard = ({
           </div>
         </div>
 
-        {/* [Requirement 7: Conditional Rendering of Icon] */}
         {Icon && (
           <div className={`p-3 rounded-xl ${scheme.iconBg}`}>
             <Icon className="w-6 h-6 stroke-[2]" />
@@ -80,7 +72,6 @@ export const StatCard = ({
         )}
       </div>
 
-      {/* [Requirement 7: Conditional Rendering using ternary operator] */}
       {subtitle ? (
         <p className="mt-3 text-xs text-slate-500 font-medium flex items-center gap-1">
           {subtitle}

@@ -1,8 +1,3 @@
-// [Requirement 1: Multiple React Components]
-// [Requirement 2: Responsive Web Design]
-// [Requirement 7: Conditional Rendering]
-// frontend/src/pages/LiveQueuePage.jsx
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useClinic } from '../context/ClinicContext';
@@ -22,7 +17,6 @@ export const LiveQueuePage = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200/80 pb-6">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
@@ -62,7 +56,6 @@ export const LiveQueuePage = () => {
         </div>
       </div>
 
-      {/* KPI Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
           title={t.totalWaiting}
@@ -88,7 +81,6 @@ export const LiveQueuePage = () => {
         />
       </div>
 
-      {/* Live Queue Board Component */}
       <LiveQueueBoard viewMode="public" />
     </div>
   );

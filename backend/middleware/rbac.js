@@ -1,12 +1,3 @@
-// ==============================================================================
-// MediTrack Role-Based Access Control (RBAC) Middleware
-// [Requirement 2: Role Authorization & HTTP 403 Forbidden Responses]
-// ==============================================================================
-
-/**
- * Restricts access to specific staff roles.
- * @param {string|string[]} allowedRoles - Single role or array of allowed roles
- */
 const requireRole = (allowedRoles) => {
   const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
 

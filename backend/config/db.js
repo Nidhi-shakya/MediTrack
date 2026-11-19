@@ -1,8 +1,3 @@
-// ==============================================================================
-// MediTrack Database Connection Manager
-// [Requirement 5: Database Reliability & Graceful Error Handling]
-// ==============================================================================
-
 const mongoose = require('mongoose');
 
 let isConnected = false;
@@ -39,7 +34,6 @@ const connectDB = async () => {
   }
 };
 
-// Mongoose Connection Event Observers
 mongoose.connection.on('disconnected', () => {
   isConnected = false;
   console.warn('⚠️ MongoDB connection lost. Database state: disconnected.');

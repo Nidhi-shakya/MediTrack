@@ -1,10 +1,3 @@
-// [Requirement 1: Multiple React Components]
-// [Requirement 6: Props & State - Child Component Receiving Data & Callbacks via Props]
-// [Requirement 7: Conditional Rendering]
-// [Requirement 2: Responsive Design]
-// [Requirement 3: Tailwind Medical UI]
-// frontend/src/components/PatientCard.jsx
-
 import React from 'react';
 import {
   Clock,
@@ -25,7 +18,7 @@ export const PatientCard = ({
   patient,
   index = 0,
   patientsAhead = 0,
-  viewMode = 'public', // 'public' | 'reception' | 'doctor'
+  viewMode = 'public', 
   onStatusChange,
   onDelete,
   onSelectForPrescription,
@@ -44,10 +37,8 @@ export const PatientCard = ({
     status,
   } = patient;
 
-  // Real-time Scenario Logic: Live Waiting Time Calculation (Patients Ahead * 10 mins)
   const estimatedWaitMinutes = patientsAhead * 10;
 
-  // Priority Styling Mapping
   const priorityStyles = {
     High: {
       badge: 'bg-rose-100 text-rose-800 border-rose-200',
@@ -83,7 +74,6 @@ export const PatientCard = ({
       className={`bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm hover:shadow-md transition-all ${priorityConfig.border}`}
     >
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-        {/* Token and Name */}
         <div className="flex items-start gap-3">
           <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-slate-900 text-white font-extrabold shadow-sm shrink-0">
             <span className="text-[10px] text-slate-400 uppercase tracking-widest">TOKEN</span>
@@ -96,7 +86,6 @@ export const PatientCard = ({
                 {name}
               </h4>
 
-              {/* [Requirement 7: Conditional Rendering - Priority Badge] */}
               <span
                 className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${priorityConfig.badge}`}
               >
@@ -104,7 +93,6 @@ export const PatientCard = ({
                 {priority} Triage ({riskScore}% Risk)
               </span>
 
-              {/* [Requirement 7: Conditional Rendering - Status Badge] */}
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
                   statusStyles[status] || 'bg-slate-100'
@@ -128,8 +116,6 @@ export const PatientCard = ({
           </div>
         </div>
 
-        {/* Live Wait Time Estimate for Waiting Patients */}
-        {/* [Requirement 7: Conditional Rendering using ternary & logical operator] */}
         {status === 'Waiting' ? (
           <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-1 p-2 bg-slate-50 rounded-xl border border-slate-200/80 shrink-0">
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
@@ -156,7 +142,6 @@ export const PatientCard = ({
         )}
       </div>
 
-      {/* Symptoms and Temperature Bar */}
       <div className="mt-3.5 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-2 text-slate-600 flex-1">
           <span className="font-semibold text-slate-700 shrink-0">Chief Symptoms:</span>
@@ -175,7 +160,6 @@ export const PatientCard = ({
             <span>{temperature}°F</span>
           </div>
 
-          {/* Risk Score Progress Bar */}
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] text-slate-500 font-bold">Risk:</span>
             <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
@@ -189,7 +173,6 @@ export const PatientCard = ({
         </div>
       </div>
 
-      {/* Role-Based Action Controls [Requirement 7: Conditional Rendering] */}
       {viewMode === 'reception' && (
         <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">

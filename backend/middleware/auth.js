@@ -1,12 +1,6 @@
-// ==============================================================================
-// MediTrack JWT Authentication Middleware
-// [Requirement 1 & 2: Token Verification, Expiry Handling, HTTP 401 Codes]
-// ==============================================================================
-
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
-// [Phase 1: Security] Secure JWT Secret handling - no predictable hardcoded secret in production
 let JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   if (process.env.NODE_ENV === 'test') {
@@ -28,7 +22,6 @@ const authenticateToken = (req, res, next) => {
     });
   }
 
-  // Token format: "Bearer <token>"
   const parts = authHeader.split(' ');
   if (parts.length !== 2 || parts[0] !== 'Bearer') {
     return res.status(401).json({
@@ -42,7 +35,7 @@ const authenticateToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // { id, username, role, name }
+    req.user = decoded; 
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {

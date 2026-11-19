@@ -1,11 +1,3 @@
-// [Requirement 1: Multiple React Components]
-// [Requirement 4: Fetch API]
-// [Requirement 5: Error Handling]
-// [Requirement 6: Props & State]
-// [Requirement 7: Conditional Rendering]
-// [Requirement 8: Protected Routes Integration]
-// frontend/src/pages/ReceptionDashboard.jsx
-
 import React, { useState } from 'react';
 import { useClinic } from '../context/ClinicContext';
 import { StatCard } from '../components/StatCard';
@@ -35,10 +27,9 @@ export const ReceptionDashboard = () => {
     t,
   } = useClinic();
 
-  const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'Waiting' | 'In-Consultation' | 'Completed'
+  const [activeTab, setActiveTab] = useState('ALL'); 
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Call the highest priority next waiting patient into the doctor's cabin (Phase 3)
   const handleCallNextPatient = async () => {
     await callNextPatient();
   };
@@ -54,7 +45,6 @@ export const ReceptionDashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Header and Quick Actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 pb-6">
         <div>
           <span className="text-[11px] font-extrabold uppercase tracking-widest text-teal-700 bg-teal-100 px-2.5 py-0.5 rounded-full">
@@ -78,7 +68,6 @@ export const ReceptionDashboard = () => {
             Sync
           </button>
 
-          {/* Quick Call Next Button */}
           <button
             onClick={handleCallNextPatient}
             className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-extrabold transition shadow-md shadow-blue-500/20"
@@ -89,7 +78,6 @@ export const ReceptionDashboard = () => {
         </div>
       </div>
 
-      {/* Reception KPI StatCards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="In Waiting Line"
@@ -122,9 +110,7 @@ export const ReceptionDashboard = () => {
         />
       </div>
 
-      {/* Tabs and Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Status Filters */}
         <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 text-xs font-bold">
           {['ALL', 'Waiting', 'In-Consultation', 'Completed'].map((tab) => (
             <button
@@ -141,7 +127,6 @@ export const ReceptionDashboard = () => {
           ))}
         </div>
 
-        {/* Search */}
         <div className="relative w-full md:w-72">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
             <Search className="w-3.5 h-3.5" />
@@ -156,9 +141,7 @@ export const ReceptionDashboard = () => {
         </div>
       </div>
 
-      {/* Patients List with Reception Actions */}
       <div className="space-y-3">
-        {/* [Requirement 7: Conditional Rendering] */}
         {filteredPatients.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs">
             No patient records match the selected status filter.

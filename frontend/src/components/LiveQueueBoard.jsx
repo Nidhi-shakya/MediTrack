@@ -1,9 +1,3 @@
-// [Requirement 1: Multiple React Components]
-// [Requirement 2: Responsive Web Design]
-// [Requirement 6: Props & State]
-// [Requirement 7: Conditional Rendering]
-// frontend/src/components/LiveQueueBoard.jsx
-
 import React, { useState } from 'react';
 import { useClinic } from '../context/ClinicContext';
 import { PatientCard } from './PatientCard';
@@ -28,14 +22,11 @@ export const LiveQueueBoard = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
 
-  // Currently In-Consultation Patient
   const activeConsultation = patients.find((p) => p.status === 'In-Consultation');
 
-  // Waiting Patients sorted by Triage Priority (High > Medium > Normal)
   const waitingPatients = patients
     .filter((p) => p.status === 'Waiting')
     .filter((p) => {
-      // Search filter (Safely handles masked public queue items without phone or symptoms)
       const term = searchTerm.toLowerCase();
       const matchesSearch =
         (p.name && p.name.toLowerCase().includes(term)) ||
@@ -43,7 +34,6 @@ export const LiveQueueBoard = ({
         (p.phone && p.phone.includes(term)) ||
         (p.symptoms && p.symptoms.toLowerCase().includes(term));
 
-      // Priority filter
       const matchesPriority = priorityFilter === 'ALL' || p.priority === priorityFilter;
 
       return matchesSearch && matchesPriority;
@@ -51,8 +41,6 @@ export const LiveQueueBoard = ({
 
   return (
     <div className="space-y-6">
-      {/* Active Consultation Spotlight Banner */}
-      {/* [Requirement 7: Conditional Rendering using logical &&] */}
       {activeConsultation && (
         <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-teal-600 rounded-3xl p-6 text-white shadow-xl shadow-blue-500/10">
           <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-white/20">
@@ -93,7 +81,6 @@ export const LiveQueueBoard = ({
         </div>
       )}
 
-      {/* Queue Controls Bar: Search & Priority Filter */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="relative w-full sm:w-80">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -124,9 +111,7 @@ export const LiveQueueBoard = ({
         </div>
       </div>
 
-      {/* Waiting Patient Cards Stack */}
       <div className="space-y-3">
-        {/* [Requirement 7: Conditional Rendering - Empty State vs Patient Cards] */}
         {waitingPatients.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200 p-8">
             <Inbox className="w-12 h-12 text-slate-300 mx-auto mb-3" />

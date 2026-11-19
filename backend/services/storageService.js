@@ -1,16 +1,9 @@
-// ==============================================================================
-// MediTrack Unified Storage Service (MongoDB Atlas + In-Memory Fallback)
-// [Requirement 13 & 14: Dual Storage Engine with Safe Fallback]
-// ==============================================================================
-
 const bcrypt = require('bcryptjs');
 const Patient = require('../models/Patient');
 const Prescription = require('../models/Prescription');
 const Staff = require('../models/Staff');
 const { getDatabaseStatus } = require('../config/db');
 
-// Seed Staff Accounts with bcrypt pre-hashed credentials
-// Pre-computed hash for demo PIN '1234' with 10 salt rounds:
 const DEFAULT_HASH_1234 = bcrypt.hashSync('1234', 10);
 
 const initialStaff = [
@@ -36,7 +29,6 @@ const initialStaff = [
   },
 ];
 
-// Seed 4 Realistic Indian Patients
 const initialPatients = [
   {
     _id: '65f1a101b1c2d3e4f5a00101',
@@ -104,12 +96,10 @@ const initialPatients = [
   },
 ];
 
-// Active In-Memory Store
 let inMemoryPatients = JSON.parse(JSON.stringify(initialPatients));
 let inMemoryPrescriptions = [];
 let inMemoryStaff = JSON.parse(JSON.stringify(initialStaff));
 
-// Socket.IO Server Instance Holder for Real-time Notifications (Phase 3)
 let ioInstance = null;
 
 const setSocketIO = (io) => {
@@ -130,8 +120,6 @@ const broadcastQueueUpdate = (action, data = null) => {
   }
 };
 
-// Helper: Mask Patient Name for Public Queue Privacy (Requirement 3)
-// Example: "Ramesh Sharma" -> "Ramesh S."
 const maskPatientName = (fullName) => {
   if (!fullName) return 'Patient';
   const parts = fullName.trim().split(' ');
@@ -141,7 +129,6 @@ const maskPatientName = (fullName) => {
   return `${firstName} ${lastInitial}.`;
 };
 
-// Generate Next Token Number sequentially
 const generateNextTokenNumber = async () => {
   let existingTokens = [];
   const dbStatus = getDatabaseStatus();
@@ -164,20 +151,16 @@ const generateNextTokenNumber = async () => {
   return `T-${maxNum + 1}`;
 };
 
-// Sort Queue according to clinical triage urgency
 const sortQueue = (patients) => {
   const priorityWeight = { High: 3, Medium: 2, Normal: 1 };
 
   return [...patients].sort((a, b) => {
-    // 1. In-Consultation first
     if (a.status === 'In-Consultation' && b.status !== 'In-Consultation') return -1;
     if (b.status === 'In-Consultation' && a.status !== 'In-Consultation') return 1;
 
-    // 2. Waiting before Completed
     if (a.status === 'Waiting' && b.status === 'Completed') return -1;
     if (b.status === 'Waiting' && a.status === 'Completed') return 1;
 
-    // 3. Waiting sorted by Priority (High > Medium > Normal), then FIFO
     if (a.status === 'Waiting' && b.status === 'Waiting') {
       const weightA = priorityWeight[a.priority] || 1;
       const weightB = priorityWeight[b.priority] || 1;
@@ -185,7 +168,6 @@ const sortQueue = (patients) => {
       return new Date(a.createdAt) - new Date(b.createdAt);
     }
 
-    // 4. Completed sorted reverse chronological
     return new Date(b.createdAt) - new Date(a.createdAt);
   });
 };
@@ -225,7 +207,6 @@ module.exports = {
 
     const sorted = sortQueue(list);
 
-    // If pagination requested
     if (page && limit) {
       const pageNum = Math.max(1, parseInt(page, 10));
       const limitNum = Math.max(1, parseInt(limit, 10));
@@ -312,7 +293,6 @@ module.exports = {
     let nextPatient = null;
 
     if (dbStatus.isConnected) {
-      // Find waiting patients, sort by priority and createdAt
       const waiting = await Patient.find({ status: 'Waiting' }).lean();
       if (!waiting || waiting.length === 0) return null;
       const sorted = sortQueue(waiting);
@@ -375,7 +355,6 @@ module.exports = {
       const newRx = new Prescription(prescriptionData);
       savedRx = await newRx.save();
 
-      // Automatically mark patient as Completed & attach prescription
       await Patient.findByIdAndUpdate(prescriptionData.patientId, {
         status: 'Completed',
         prescription: savedRx._id,
@@ -389,7 +368,6 @@ module.exports = {
       };
       inMemoryPrescriptions.push(savedRx);
 
-      // Update patient status to Completed
       const idx = inMemoryPatients.findIndex(
         (p) => String(p._id) === String(prescriptionData.patientId)
       );

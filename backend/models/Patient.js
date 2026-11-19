@@ -1,5 +1,3 @@
-// [Requirement 15: Mongoose Schemas]
-// backend/models/Patient.js
 const mongoose = require('mongoose');
 
 const patientSchema = new mongoose.Schema(
@@ -45,7 +43,6 @@ const patientSchema = new mongoose.Schema(
       min: [95, 'Body temperature cannot be lower than 95°F'],
       max: [108, 'Body temperature cannot exceed 108°F'],
     },
-    // Automated Smart Triage Engine Fields
     priority: {
       type: String,
       required: true,
@@ -72,11 +69,10 @@ const patientSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true, // Auto-generates createdAt and updatedAt
+    timestamps: true, 
   }
 );
 
-// Database Indexes for Fast Queue Sorting & Search (Phase 5)
 patientSchema.index({ status: 1, priority: 1, createdAt: 1 });
 patientSchema.index({ tokenNumber: 1 });
 patientSchema.index({ name: 1 });

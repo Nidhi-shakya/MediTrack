@@ -1,9 +1,3 @@
-// [Requirement 1: Multiple React Components]
-// [Requirement 9: Forms and Form Validation]
-// [Requirement 6: Props and State - useState]
-// [Requirement 7: Conditional Rendering]
-// frontend/src/components/BookingForm.jsx
-
 import React, { useState } from 'react';
 import { useClinic } from '../context/ClinicContext';
 import {
@@ -22,7 +16,6 @@ import {
 export const BookingForm = ({ onSuccess }) => {
   const { bookPatient, loading, t } = useClinic();
 
-  // [Requirement 6 & 9: Controlled Component Form State]
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -32,11 +25,9 @@ export const BookingForm = ({ onSuccess }) => {
     temperature: '98.6',
   });
 
-  // [Requirement 9: Custom Inline Validation Error State]
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
 
-  // Real-time Automated Smart Triage Calculation for live preview
   const getLiveTriage = () => {
     const ageNum = Number(formData.age);
     const tempNum = Number(formData.temperature);
@@ -73,7 +64,6 @@ export const BookingForm = ({ onSuccess }) => {
 
   const liveTriage = getLiveTriage();
 
-  // [Requirement 9: Strict Custom Form Validation Rules]
   const validateField = (fieldName, value) => {
     let errorMsg = '';
 
@@ -92,7 +82,6 @@ export const BookingForm = ({ onSuccess }) => {
         break;
 
       case 'phone':
-        // Indian 10-digit mobile number starting with 6, 7, 8, 9
         const phoneRegex = /^[6-9]\d{9}$/;
         if (!value || !phoneRegex.test(String(value).trim())) {
           errorMsg = 'Enter a valid 10-digit Indian phone number starting with 6-9.';
@@ -123,7 +112,6 @@ export const BookingForm = ({ onSuccess }) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Instant validation if already touched
     if (touched[name]) {
       const fieldError = validateField(name, value);
       setErrors((prev) => ({ ...prev, [name]: fieldError }));
@@ -137,7 +125,6 @@ export const BookingForm = ({ onSuccess }) => {
     setErrors((prev) => ({ ...prev, [name]: fieldError }));
   };
 
-  // Validate entire form before submission
   const validateForm = () => {
     const validationErrors = {
       name: validateField('name', formData.name),
@@ -177,7 +164,6 @@ export const BookingForm = ({ onSuccess }) => {
 
     const response = await bookPatient(payload);
     if (response.success) {
-      // Reset form
       setFormData({
         name: '',
         age: '',
@@ -212,7 +198,6 @@ export const BookingForm = ({ onSuccess }) => {
       </div>
 
       <div className="space-y-4">
-        {/* Patient Full Name */}
         <div>
           <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
             {t.fullName} <span className="text-rose-500">*</span>
@@ -235,7 +220,6 @@ export const BookingForm = ({ onSuccess }) => {
               }`}
             />
           </div>
-          {/* [Requirement 9: Inline Red Validation Message] */}
           {touched.name && errors.name && (
             <p className="text-rose-600 text-xs mt-1 font-medium flex items-center gap-1">
               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -244,7 +228,6 @@ export const BookingForm = ({ onSuccess }) => {
           )}
         </div>
 
-        {/* Age and Gender Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
@@ -295,7 +278,6 @@ export const BookingForm = ({ onSuccess }) => {
           </div>
         </div>
 
-        {/* Phone and Temperature Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
@@ -362,7 +344,6 @@ export const BookingForm = ({ onSuccess }) => {
           </div>
         </div>
 
-        {/* Symptoms Description */}
         <div>
           <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
             {t.symptoms} <span className="text-rose-500">*</span>
@@ -393,7 +374,6 @@ export const BookingForm = ({ onSuccess }) => {
           )}
         </div>
 
-        {/* Live Automated Triage Engine Preview Indicator */}
         <div className={`p-3.5 rounded-2xl border ${liveTriage.color} transition-all`}>
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
@@ -412,7 +392,6 @@ export const BookingForm = ({ onSuccess }) => {
           </p>
         </div>
 
-        {/* Urgent Emergency Warning Alert (Requirement 6) */}
         {liveTriage.priority === 'High' && (
           <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2.5">
             <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
@@ -423,18 +402,15 @@ export const BookingForm = ({ onSuccess }) => {
           </div>
         )}
 
-        {/* Educational Decision-Support Disclaimer (Requirement 6) */}
         <p className="text-[10px] text-slate-400 italic text-center px-1">
           {t.triageExplanation}
         </p>
 
-        {/* Submit Button */}
         <button
           type="submit"
           disabled={loading}
           className="w-full mt-2 py-3 px-6 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 disabled:opacity-50 text-white font-bold text-sm rounded-xl shadow-md shadow-teal-500/20 flex items-center justify-center gap-2 transition"
         >
-          {/* [Requirement 7: Conditional Rendering - Spinner] */}
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />

@@ -1,8 +1,3 @@
-// ==============================================================================
-// Authorization & Role-Based Access Control Automated Tests
-// [Requirement 7: Unauthorized API Access & Role-Based Access Tests]
-// ==============================================================================
-
 const request = require('supertest');
 const app = require('../server');
 const storage = require('../services/storageService');
@@ -14,7 +9,6 @@ describe('Authorization & RBAC Middleware (/api)', () => {
   beforeAll(async () => {
     storage.resetMemoryStoreForTesting();
 
-    // Generate tokens for both roles
     const recRes = await request(app)
       .post('/api/auth/login')
       .send({ role: 'reception', pin: '1234' });

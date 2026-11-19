@@ -1,9 +1,3 @@
-// [Requirement 1: Multiple React Components]
-// [Requirement 2: Responsive Web Design - sm:, md:, lg:]
-// [Requirement 6: Props and State]
-// [Requirement 7: Conditional Rendering]
-// frontend/src/pages/BookingPage.jsx
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useClinic } from '../context/ClinicContext';
@@ -26,7 +20,6 @@ export const BookingPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Top Banner */}
       <div className="text-center sm:text-left sm:flex sm:items-center sm:justify-between gap-4 border-b border-slate-200/80 pb-6">
         <div>
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-teal-100 text-teal-800 uppercase tracking-wider mb-2">
@@ -52,7 +45,6 @@ export const BookingPage = () => {
         </div>
       </div>
 
-      {/* KPI Stat Cards Grid [Requirement 6: Props & State] */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title={t.totalWaiting}
@@ -85,16 +77,12 @@ export const BookingPage = () => {
         />
       </div>
 
-      {/* Main Grid: Booking Form & Success Token Card */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Form */}
         <div className="lg:col-span-7">
           <BookingForm onSuccess={(patient) => setIssuedToken(patient)} />
         </div>
 
-        {/* Right Column: Issued Token Ticket / Information Panel */}
         <div className="lg:col-span-5 space-y-6">
-          {/* [Requirement 7: Conditional Rendering - Token Receipt Card] */}
           {issuedToken ? (
             <div className="bg-gradient-to-b from-teal-900 to-slate-900 text-white rounded-3xl p-6 sm:p-7 shadow-2xl relative overflow-hidden border border-teal-500/30">
               <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">

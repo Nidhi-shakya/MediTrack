@@ -1,8 +1,3 @@
-// ==============================================================================
-// Patient Data Privacy & Registration Automated Tests
-// [Requirement 3 & 7: Data Privacy & Patient CRUD Tests]
-// ==============================================================================
-
 const request = require('supertest');
 const app = require('../server');
 const storage = require('../services/storageService');
@@ -18,9 +13,6 @@ describe('Patient Data Privacy & Registration API', () => {
     staffToken = loginRes.body.token;
   });
 
-  // ----------------------------------------------------------------------------
-  // [Requirement 3: Patient Data Privacy Protection]
-  // ----------------------------------------------------------------------------
   describe('GET /api/patients/public-queue (Public Live Display)', () => {
     it('should be publicly accessible without authentication', async () => {
       const res = await request(app).get('/api/patients/public-queue');
@@ -55,9 +47,6 @@ describe('Patient Data Privacy & Registration API', () => {
     });
   });
 
-  // ----------------------------------------------------------------------------
-  // [Requirement 7 & 8: Patient Registration & Input Validation]
-  // ----------------------------------------------------------------------------
   describe('POST /api/patients (Patient Registration & Token Booking)', () => {
     it('should register a valid patient and return token and triage details', async () => {
       const payload = {
@@ -100,7 +89,7 @@ describe('Patient Data Privacy & Registration API', () => {
         name: 'Aarav Mehta',
         age: 30,
         gender: 'Male',
-        phone: '1234567890', // Invalid: does not start with 6-9
+        phone: '1234567890', 
         temperature: 98.6,
         symptoms: 'Routine checkup',
       };
@@ -117,7 +106,7 @@ describe('Patient Data Privacy & Registration API', () => {
         age: 30,
         gender: 'Male',
         phone: '9876543210',
-        temperature: 115.0, // Out of range (max 108)
+        temperature: 115.0, 
         symptoms: 'Very high fever',
       };
 
@@ -130,7 +119,7 @@ describe('Patient Data Privacy & Registration API', () => {
     it('should reject registration with invalid age (400 Bad Request)', async () => {
       const payload = {
         name: 'Aarav Mehta',
-        age: 150, // Out of range
+        age: 150, 
         gender: 'Male',
         phone: '9876543210',
         temperature: 98.6,
@@ -144,9 +133,6 @@ describe('Patient Data Privacy & Registration API', () => {
     });
   });
 
-  // ----------------------------------------------------------------------------
-  // Patient Status Updates & Priority Calling (Phase 3)
-  // ----------------------------------------------------------------------------
   describe('PUT /api/patients/:id and POST /call-next', () => {
     it('should update patient status to In-Consultation when authenticated', async () => {
       const res = await request(app)

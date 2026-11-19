@@ -1,5 +1,3 @@
-// [Requirement 15: Mongoose Schemas]
-// backend/models/Prescription.js
 const mongoose = require('mongoose');
 
 const medicineItemSchema = new mongoose.Schema({
@@ -75,7 +73,6 @@ const prescriptionSchema = new mongoose.Schema(
   }
 );
 
-// Indexes for Fast Prescription History Lookup (Phase 4 & 5)
 prescriptionSchema.index({ patientId: 1, createdAt: -1 });
 prescriptionSchema.index({ tokenNumber: 1 });
 

@@ -1,8 +1,3 @@
-// [Requirement 1: Multiple React Components]
-// [Requirement 2: Responsive Web Design - sm:, md:, lg:]
-// [Requirement 8: React Router Integration]
-// frontend/src/components/Navbar.jsx
-
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useClinic } from '../context/ClinicContext';
@@ -37,7 +32,6 @@ export const Navbar = () => {
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Brand Logo & Name */}
           <Link
             to="/"
             className="flex items-center gap-2.5 text-teal-700 hover:text-teal-800 transition-colors"
@@ -59,9 +53,7 @@ export const Navbar = () => {
             </div>
           </Link>
 
-          {/* Desktop Navigation Links */}
           <nav className="hidden md:flex items-center gap-1 text-sm font-semibold">
-            {/* Public Route 1: Booking */}
             <Link
               to="/"
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
@@ -74,7 +66,6 @@ export const Navbar = () => {
               {t.navBook}
             </Link>
 
-            {/* Public Route 2: Live Queue */}
             <Link
               to="/queue"
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
@@ -87,7 +78,6 @@ export const Navbar = () => {
               {t.navQueue}
             </Link>
 
-            {/* Protected Route 1: Reception Desk */}
             <Link
               to="/reception"
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
@@ -103,7 +93,6 @@ export const Navbar = () => {
               )}
             </Link>
 
-            {/* Protected Route 2: Doctor Portal */}
             <Link
               to="/doctor"
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
@@ -120,9 +109,7 @@ export const Navbar = () => {
             </Link>
           </nav>
 
-          {/* Desktop Right Action Bar: Language + Auth */}
           <div className="hidden md:flex items-center gap-3">
-            {/* Database Engine Status Indicator (Requirement 5 & 14) */}
             {systemStatus && (
               <span
                 className={`hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
@@ -137,7 +124,6 @@ export const Navbar = () => {
               </span>
             )}
 
-            {/* Conditional Staff User Badge or Login Link */}
             {staffUser ? (
               <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
                 <div className="text-right">
@@ -168,7 +154,6 @@ export const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile Hamburger Button */}
           <div className="flex items-center gap-2 md:hidden">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -181,7 +166,6 @@ export const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-2 shadow-lg">
           <Link

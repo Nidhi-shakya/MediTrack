@@ -1,18 +1,8 @@
-// ==============================================================================
-// MediTrack Clinic Context & State Management
-// [Requirement 1: Real JWT Handling, Expiry Interception, & Clean Session Storage]
-// [Requirement 2 & 3: Role-Aware Queries & Public Queue Privacy Consumption]
-// [Requirement 4: Pure Native Fetch API with Async/Await]
-// [Requirement 5: Visible UI Alerts & Error Handling]
-// [Requirement 10: Hooks & Context API with Multilingual Support]
-// ==============================================================================
-
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { io } from 'socket.io-client';
 
 export const ClinicContext = createContext();
 
-// UI Dictionary: English
 const translations = {
   en: {
     brand: 'MediTrack',
@@ -95,7 +85,6 @@ export const ClinicProvider = ({ children }) => {
   const [systemStatus, setSystemStatus] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Authenticated Staff Profile & JWT Token
   const [staffUser, setStaffUser] = useState(() => {
     try {
       const saved = localStorage.getItem('meditrack_staff');
@@ -107,7 +96,6 @@ export const ClinicProvider = ({ children }) => {
 
   const t = translations[language] || translations.en;
 
-  // Auto-dismiss alert notifications
   useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => setSuccessMessage(null), 5000);
@@ -122,14 +110,12 @@ export const ClinicProvider = ({ children }) => {
     }
   }, [error]);
 
-  // Handle Token Expiry & Automatic Sign-out
   const handleAuthExpiry = useCallback(() => {
     setStaffUser(null);
     localStorage.removeItem('meditrack_staff');
     setError('Your session has expired or is invalid. Please sign in again.');
   }, []);
 
-  // Fetch Public Live Queue (No auth, privacy-preserving)
   const fetchPublicQueue = useCallback(async () => {
     try {
       const response = await fetch(`${BASE_URL}/patients/public-queue`);
@@ -144,7 +130,6 @@ export const ClinicProvider = ({ children }) => {
     }
   }, []);
 
-  // Fetch Full Patients Roster (Staff JWT Protected)
   const fetchPatients = useCallback(async () => {
     if (!staffUser || !staffUser.token) {
       return;
@@ -179,7 +164,6 @@ export const ClinicProvider = ({ children }) => {
     }
   }, [staffUser, handleAuthExpiry]);
 
-  // Fetch Prescriptions (Staff JWT Protected)
   const fetchPrescriptions = useCallback(async () => {
     if (!staffUser || !staffUser.token) {
       return;
@@ -206,7 +190,6 @@ export const ClinicProvider = ({ children }) => {
     }
   }, [staffUser, handleAuthExpiry]);
 
-  // Fetch System Diagnostics
   const fetchStatus = useCallback(async () => {
     try {
       const response = await fetch(`${BASE_URL}/status`);
@@ -215,11 +198,9 @@ export const ClinicProvider = ({ children }) => {
         setSystemStatus(result);
       }
     } catch {
-      // Ignored for offline tolerance
     }
   }, []);
 
-  // Real-Time Socket.IO Synchronization (Phase 3: Smart Queue Management)
   useEffect(() => {
     let socket = null;
     try {
@@ -245,7 +226,6 @@ export const ClinicProvider = ({ children }) => {
     };
   }, [staffUser, fetchPublicQueue, fetchPatients, fetchPrescriptions]);
 
-  // Periodic Synchronization (Fallback Polling)
   useEffect(() => {
     fetchPublicQueue();
     fetchStatus();
@@ -265,7 +245,6 @@ export const ClinicProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [staffUser, fetchPublicQueue, fetchPatients, fetchPrescriptions, fetchStatus]);
 
-  // Book Patient / Generate Smart Token (Public or Reception)
   const bookPatient = async (patientFormData) => {
     setLoading(true);
     setError(null);
@@ -298,7 +277,6 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  // Update Patient Status (Staff Protected)
   const updatePatientStatus = async (patientId, newStatus) => {
     if (!staffUser || !staffUser.token) {
       setError('Staff login required to change patient status.');
@@ -337,7 +315,6 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  // Delete Patient Record (Reception Staff Only)
   const deletePatient = async (patientId) => {
     if (!staffUser || !staffUser.token) {
       setError('Staff login required.');
@@ -378,7 +355,6 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  // Call Next Patient (Phase 3: Priority Smart Queue Calling)
   const callNextPatient = async () => {
     if (!staffUser || !staffUser.token) {
       setError('Staff login required.');
@@ -419,7 +395,6 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  // Fetch Patient Prescription History (Phase 4)
   const fetchPrescriptionHistory = async (patientId) => {
     if (!staffUser || !staffUser.token || !patientId) return [];
     try {
@@ -438,7 +413,6 @@ export const ClinicProvider = ({ children }) => {
     return [];
   };
 
-  // Save Digital Prescription (Doctor Only)
   const savePrescription = async (prescriptionData) => {
     if (!staffUser || !staffUser.token) {
       setError('Doctor authentication required.');
@@ -481,7 +455,6 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  // Staff Login (Real JWT & Bcrypt Verification)
   const loginStaff = async (pin, role) => {
     setError(null);
     setLoading(true);
@@ -520,14 +493,12 @@ export const ClinicProvider = ({ children }) => {
     }
   };
 
-  // Logout
   const logoutStaff = () => {
     setStaffUser(null);
     localStorage.removeItem('meditrack_staff');
     setSuccessMessage('Signed out successfully.');
   };
 
-  // Derived KPI Statistics
   const stats = useMemo(() => {
     const listToCount = staffUser ? patients : publicQueue;
     const waitingList = listToCount.filter((p) => p.status === 'Waiting');
@@ -548,7 +519,6 @@ export const ClinicProvider = ({ children }) => {
     };
   }, [staffUser, patients, publicQueue]);
 
-  // Client-Side Search Filter for Dashboards (Phase 3 & 6)
   const filteredPatients = useMemo(() => {
     const list = staffUser ? patients : publicQueue;
     if (!searchQuery.trim()) return list;

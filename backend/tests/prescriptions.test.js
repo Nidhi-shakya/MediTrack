@@ -1,8 +1,3 @@
-// ==============================================================================
-// Prescription Creation & Doctor Workflow Automated Tests
-// [Requirement 7: Prescription Creation & Consultation Completion Tests]
-// ==============================================================================
-
 const request = require('supertest');
 const app = require('../server');
 const storage = require('../services/storageService');
@@ -20,7 +15,7 @@ describe('Prescriptions API (/api/prescriptions)', () => {
 
   it('should allow authorized doctor to issue a digital prescription and auto-complete patient', async () => {
     const rxPayload = {
-      patientId: '65f1a101b1c2d3e4f5a00103', // Priya Kaur
+      patientId: '65f1a101b1c2d3e4f5a00103', 
       diagnosis: 'Acute Viral Pharyngitis with Mild Dehydration',
       medicines: [
         { medicineName: 'Paracetamol 650mg', dosage: '1-0-1', duration: '3 Days' },
@@ -39,7 +34,6 @@ describe('Prescriptions API (/api/prescriptions)', () => {
     expect(res.body.data.diagnosis).toBe(rxPayload.diagnosis);
     expect(res.body.data.medicines.length).toBe(2);
 
-    // Verify patient status was automatically changed to Completed
     const patientRes = await request(app)
       .get('/api/patients')
       .set('Authorization', `Bearer ${doctorToken}`);
@@ -94,7 +88,7 @@ describe('Prescriptions API (/api/prescriptions)', () => {
 
   it('should support followUpDate and doctorNotes in prescription issuance', async () => {
     const rxPayload = {
-      patientId: '65f1a101b1c2d3e4f5a00102', // Sunita Patel
+      patientId: '65f1a101b1c2d3e4f5a00102', 
       diagnosis: 'Acute Bronchitis',
       medicines: [
         { medicineName: 'Amoxicillin 500mg', dosage: '1-1-1', duration: '5 Days' },

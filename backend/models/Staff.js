@@ -1,8 +1,3 @@
-// ==============================================================================
-// MediTrack Staff Authentication Model
-// [Requirement 1: Proper Authentication with Bcrypt Password Hashing]
-// ==============================================================================
-
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -46,7 +41,6 @@ const staffSchema = new mongoose.Schema(
   }
 );
 
-// Method to verify password against bcrypt hash
 staffSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(String(candidatePassword), this.passwordHash);
 };

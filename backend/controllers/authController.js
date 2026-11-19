@@ -1,8 +1,3 @@
-// ==============================================================================
-// MediTrack Staff Authentication Controller
-// [Requirement 1: Real JWT Auth, Bcrypt Verification, Token Expiration]
-// ==============================================================================
-
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const storage = require('../services/storageService');
@@ -10,10 +5,6 @@ const { JWT_SECRET } = require('../middleware/auth');
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
 
-/**
- * Staff Login Handler
- * Authenticates staff with role/username and password/PIN, returns JWT.
- */
 const login = async (req, res, next) => {
   try {
     const { pin, password, role, username } = req.body;
@@ -27,7 +18,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Lookup staff by username or role
     const identifier = username || role || 'reception';
     let staff = await storage.findStaffByUsername(identifier);
 
@@ -43,7 +33,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Bcrypt hash comparison
     const isMatch = await bcrypt.compare(String(credential).trim(), staff.passwordHash);
 
     if (!isMatch) {
@@ -54,7 +43,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Generate real JWT token with configurable expiration
     const payload = {
       id: staff._id,
       username: staff.username,
@@ -83,9 +71,6 @@ const login = async (req, res, next) => {
   }
 };
 
-/**
- * Get Current Authenticated Staff Profile
- */
 const getMe = async (req, res) => {
   return res.status(200).json({
     success: true,

@@ -1,26 +1,16 @@
-// ==============================================================================
-// MediTrack Patient Management Controller
-// [Requirement 2 & 3: Authorization, Privacy Protection & Sanitized Views]
-// ==============================================================================
-
 const storage = require('../services/storageService');
 const { evaluateTriage } = require('../services/triageEngine');
 
-/**
- * Public Queue View (Unauthenticated / Public Waiting Display)
- * [Requirement 3: Patient Data Privacy - Masked Name, NO Phone, NO Symptoms]
- */
 const getPublicQueue = async (req, res, next) => {
   try {
     const allPatients = await storage.getPatients();
 
-    // Filter to active queue items and sanitize all sensitive demographic/clinical fields
     const sanitizedQueue = allPatients
       .filter((p) => p.status === 'Waiting' || p.status === 'In-Consultation')
       .map((p, idx) => ({
         _id: p._id,
         tokenNumber: p.tokenNumber,
-        name: storage.maskPatientName(p.name), // e.g. "Ramesh S."
+        name: storage.maskPatientName(p.name), 
         age: p.age,
         gender: p.gender,
         priority: p.priority,
@@ -45,11 +35,6 @@ const getPublicQueue = async (req, res, next) => {
   }
 };
 
-/**
- * Staff Patient Roster (Authenticated Reception & Doctor Only)
- * [Requirement 2: Full Clinical Details Accessible Only With Valid JWT]
- * [Phase 3 & 5: Supports Search by Name/Token and Pagination]
- */
 const getAllPatients = async (req, res, next) => {
   try {
     const { search, status, page, limit } = req.query;
@@ -83,11 +68,6 @@ const getAllPatients = async (req, res, next) => {
   }
 };
 
-/**
- * Call Next Patient in Priority Queue
- * Automatically moves highest-urgency waiting patient to 'In-Consultation'
- * Protected: Reception & Doctor Staff
- */
 const callNextPatient = async (req, res, next) => {
   try {
     const nextPatient = await storage.callNextPatient();
@@ -110,15 +90,10 @@ const callNextPatient = async (req, res, next) => {
   }
 };
 
-/**
- * Register New Patient / Issue Token with Automated Smart Triage
- * Public or Front-Desk Patient Registration
- */
 const registerPatient = async (req, res, next) => {
   try {
     const { name, age, gender, phone, temperature, symptoms } = req.body;
 
-    // Run Algorithmic Triage & Risk Evaluation
     const triageResult = evaluateTriage({ age, temperature, symptoms });
 
     const patientPayload = {
@@ -151,10 +126,6 @@ const registerPatient = async (req, res, next) => {
   }
 };
 
-/**
- * Update Patient Status (Waiting -> In-Consultation -> Completed)
- * Protected: Requires Staff Authentication (Reception or Doctor)
- */
 const updatePatientStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -193,10 +164,6 @@ const updatePatientStatus = async (req, res, next) => {
   }
 };
 
-/**
- * Delete Patient Record from Queue
- * Protected: Reception Staff Only (Doctors cannot delete queue records)
- */
 const deletePatient = async (req, res, next) => {
   try {
     const { id } = req.params;

@@ -1,14 +1,5 @@
-// ==============================================================================
-// MediTrack Digital Prescription Controller
-// [Requirement 2 & 13: Doctor Authorization & Automatic Patient Completion]
-// ==============================================================================
-
 const storage = require('../services/storageService');
 
-/**
- * Create Digital Prescription & Mark Consultation Complete
- * Protected: Doctor Role Only
- */
 const createPrescription = async (req, res, next) => {
   try {
     const { patientId, diagnosis, medicines, notes, doctorNotes, followUpDate, doctorName } = req.body;
@@ -46,10 +37,6 @@ const createPrescription = async (req, res, next) => {
   }
 };
 
-/**
- * Retrieve All Digital Prescriptions
- * Protected: Authenticated Staff (Doctor and Reception)
- */
 const getAllPrescriptions = async (req, res, next) => {
   try {
     const list = await storage.getPrescriptions();
@@ -64,10 +51,6 @@ const getAllPrescriptions = async (req, res, next) => {
   }
 };
 
-/**
- * Retrieve Prescription History for a Specific Patient (Phase 4)
- * Protected: Doctor Only
- */
 const getPrescriptionByPatientId = async (req, res, next) => {
   try {
     const { patientId } = req.params;

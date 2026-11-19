@@ -1,8 +1,3 @@
-// ==============================================================================
-// Authentication Automated Tests
-// [Requirement 7: Login, Authentication & Invalid Credential Tests]
-// ==============================================================================
-
 const request = require('supertest');
 const app = require('../server');
 const storage = require('../services/storageService');
@@ -55,14 +50,12 @@ describe('Authentication API (/api/auth)', () => {
   });
 
   it('should return current verified user profile on GET /api/auth/me with valid JWT', async () => {
-    // 1. Log in to get token
     const loginRes = await request(app)
       .post('/api/auth/login')
       .send({ role: 'doctor', pin: '1234' });
 
     const token = loginRes.body.token;
 
-    // 2. Query /api/auth/me
     const meRes = await request(app)
       .get('/api/auth/me')
       .set('Authorization', `Bearer ${token}`);

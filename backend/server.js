@@ -1,13 +1,3 @@
-// ==============================================================================
-// MediTrack Unified Express Server
-// [Requirement 1: JWT Auth]
-// [Requirement 2: Role-Based Authorization]
-// [Requirement 3: Patient Privacy Protection]
-// [Requirement 5: Database Reliability & Graceful Error Handling]
-// [Requirement 6: Smart Triage Engine]
-// [Requirement 11: Modular REST API Architecture]
-// ==============================================================================
-
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -29,7 +19,6 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
-// [Phase 1: Security] Restrict CORS to approved frontend origins
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
@@ -43,7 +32,6 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, server-to-server, curl, same-origin)
     if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.onrender.com')) {
       callback(null, true);
     } else {
@@ -58,7 +46,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// [Phase 3: Real-Time Smart Queue Updates with Socket.IO]
 const io = new Server(server, {
   cors: {
     origin: '*',
@@ -73,14 +60,8 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {});
 });
 
-// Initialize Database Connection
 connectDB();
 
-// ------------------------------------------------------------------------------
-// API Routes
-// ------------------------------------------------------------------------------
-
-// System Health & Diagnostics Endpoint
 app.get('/api/status', (req, res) => {
   const dbStatus = getDatabaseStatus();
   res.status(200).json({
@@ -102,7 +83,6 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// API Directory Endpoint
 app.get('/api', (req, res) => {
   res.status(200).json({
     service: 'MediTrack REST API',
@@ -119,14 +99,10 @@ app.get('/api', (req, res) => {
   });
 });
 
-// Mount Feature Routers
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 
-// ------------------------------------------------------------------------------
-// Static Asset Serving & Single-Page Application (SPA) Routing
-// ------------------------------------------------------------------------------
 const frontendDistPath = path.join(__dirname, '../frontend/dist');
 if (fs.existsSync(frontendDistPath)) {
   app.use(express.static(frontendDistPath));
@@ -139,12 +115,8 @@ if (fs.existsSync(frontendDistPath)) {
   });
 }
 
-// ------------------------------------------------------------------------------
-// Centralized Error Handling Middleware
-// ------------------------------------------------------------------------------
 app.use(errorHandler);
 
-// Start Server when invoked directly (allows test runner to import app cleanly)
 if (require.main === module) {
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`================================================================`);
