@@ -10,6 +10,7 @@ import { DoctorPortal } from './pages/DoctorPortal';
 import { LoginPage } from './pages/LoginPage';
 import { ChatbotPage } from './pages/ChatbotPage';
 import { MedicineReminderPage } from './pages/MedicineReminderPage';
+import { FloatingChatWidget } from './components/FloatingChatWidget';
 import { AlertCircle, CheckCircle2, X } from 'lucide-react';
 
 const AppShell = () => {
@@ -97,6 +98,8 @@ const AppShell = () => {
           </p>
         </div>
       </footer>
+
+      <FloatingChatWidget />
     </div>
   );
 };
