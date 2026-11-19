@@ -672,11 +672,5 @@ module.exports = {
   },
 
   maskPatientName,
-  resetMemoryStoreForTesting: () => {
-    inMemoryPatients = JSON.parse(JSON.stringify(initialPatients));
-    inMemoryPrescriptions = [];
-    inMemoryStaff = JSON.parse(JSON.stringify(initialStaff));
-    inMemoryMedications = JSON.parse(JSON.stringify(initialMedications));
-  },
 };
 
