@@ -6,6 +6,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
 
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 dotenv.config();
 
 const { connectDB, getDatabaseStatus } = require('./config/db');
