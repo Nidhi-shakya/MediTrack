@@ -7,9 +7,8 @@ import { BookingPage } from './pages/BookingPage';
 import { LiveQueuePage } from './pages/LiveQueuePage';
 import { ReceptionDashboard } from './pages/ReceptionDashboard';
 import { DoctorPortal } from './pages/DoctorPortal';
-import { LoginPage } from './pages/LoginPage';
-import { ChatbotPage } from './pages/ChatbotPage';
 import { MedicineReminderPage } from './pages/MedicineReminderPage';
+import { LoginPage } from './pages/LoginPage';
 import { FloatingChatWidget } from './components/FloatingChatWidget';
 import { AlertCircle, CheckCircle2, X } from 'lucide-react';
 
@@ -57,15 +56,7 @@ const AppShell = () => {
       <main className="flex-1 pb-16">
         <Routes>
           <Route path="/" element={<BookingPage />} />
-
           <Route path="/queue" element={<LiveQueuePage />} />
-
-          <Route path="/chat" element={<ChatbotPage />} />
-
-          <Route path="/reminders" element={<MedicineReminderPage />} />
-
-          <Route path="/login" element={<LoginPage />} />
-
           <Route
             path="/reception"
             element={
@@ -74,7 +65,6 @@ const AppShell = () => {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/doctor"
             element={
@@ -83,7 +73,8 @@ const AppShell = () => {
               </ProtectedRoute>
             }
           />
-
+          <Route path="/reminders" element={<MedicineReminderPage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

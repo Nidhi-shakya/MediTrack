@@ -11,7 +11,6 @@ const translations = {
     navQueue: 'Live Queue Board',
     navReception: 'Reception Desk',
     navDoctor: 'Doctor Portal',
-    navChat: 'AI Health Chat',
     navReminders: 'Medicine Reminder',
     navLogin: 'Staff Login',
     navLogout: 'Sign Out',

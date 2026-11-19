@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
 import {
   Bot,
   Send,
-  X,
   Trash2,
   AlertTriangle,
   Sparkles,
@@ -11,7 +9,6 @@ import {
   Clock,
   User,
   ShieldCheck,
-  MessageSquare,
   ChevronDown,
 } from 'lucide-react';
 
@@ -23,7 +20,6 @@ const SUGGESTED_QUERIES = [
 ];
 
 export const FloatingChatWidget = () => {
-  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState(() => {
     try {
@@ -63,10 +59,6 @@ export const FloatingChatWidget = () => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [isOpen, messages, loading]);
-
-  if (location.pathname === '/chat') {
-    return null;
-  }
 
   const handleSend = async (messageText) => {
     const textToSend = (messageText || input).trim();
