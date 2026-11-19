@@ -13,6 +13,8 @@ const storage = require('./services/storageService');
 const authRoutes = require('./routes/authRoutes');
 const patientRoutes = require('./routes/patientRoutes');
 const prescriptionRoutes = require('./routes/prescriptionRoutes');
+const chatbotRoutes = require('./routes/chatbotRoutes');
+const medicationRoutes = require('./routes/medicationRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -95,6 +97,10 @@ app.get('/api', (req, res) => {
       deletePatient: 'DELETE /api/patients/:id (Reception JWT required)',
       issuePrescription: 'POST /api/prescriptions (Doctor JWT required)',
       listPrescriptions: 'GET /api/prescriptions (Staff JWT required)',
+      chatMessage: 'POST /api/chat/message (AI Healthcare Assistant)',
+      chatSuggestions: 'GET /api/chat/suggestions',
+      medications: 'GET, POST /api/medications (Medicine Reminder)',
+      medicationDose: 'POST /api/medications/:id/dose (Mark Taken/Skipped)',
     },
   });
 });
@@ -102,6 +108,8 @@ app.get('/api', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
+app.use('/api/chat', chatbotRoutes);
+app.use('/api/medications', medicationRoutes);
 
 const frontendDistPath = path.join(__dirname, '../frontend/dist');
 if (fs.existsSync(frontendDistPath)) {

@@ -12,6 +12,8 @@ import {
   Menu,
   X,
   ShieldCheck,
+  Bot,
+  Bell,
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -106,6 +108,30 @@ export const Navbar = () => {
               {staffUser && staffUser.role === 'doctor' && (
                 <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
               )}
+            </Link>
+
+            <Link
+              to="/chat"
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
+                isActive('/chat')
+                  ? 'bg-teal-50 text-teal-700'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Bot className="w-4 h-4" />
+              {t.navChat}
+            </Link>
+
+            <Link
+              to="/reminders"
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${
+                isActive('/reminders')
+                  ? 'bg-teal-50 text-teal-700'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Bell className="w-4 h-4" />
+              {t.navReminders}
             </Link>
           </nav>
 
@@ -207,6 +233,26 @@ export const Navbar = () => {
           >
             <Stethoscope className="w-4 h-4" />
             {t.navDoctor}
+          </Link>
+          <Link
+            to="/chat"
+            onClick={() => setMobileMenuOpen(false)}
+            className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold ${
+              isActive('/chat') ? 'bg-teal-50 text-teal-700' : 'text-slate-700'
+            }`}
+          >
+            <Bot className="w-4 h-4" />
+            {t.navChat}
+          </Link>
+          <Link
+            to="/reminders"
+            onClick={() => setMobileMenuOpen(false)}
+            className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold ${
+              isActive('/reminders') ? 'bg-teal-50 text-teal-700' : 'text-slate-700'
+            }`}
+          >
+            <Bell className="w-4 h-4" />
+            {t.navReminders}
           </Link>
 
           <div className="pt-3 border-t border-slate-200">

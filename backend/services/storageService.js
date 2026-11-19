@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const Patient = require('../models/Patient');
 const Prescription = require('../models/Prescription');
 const Staff = require('../models/Staff');
+const Medication = require('../models/Medication');
 const { getDatabaseStatus } = require('../config/db');
 
 const DEFAULT_HASH_1234 = bcrypt.hashSync('1234', 10);
@@ -99,6 +100,104 @@ const initialPatients = [
 let inMemoryPatients = JSON.parse(JSON.stringify(initialPatients));
 let inMemoryPrescriptions = [];
 let inMemoryStaff = JSON.parse(JSON.stringify(initialStaff));
+
+const nowMs = Date.now();
+const dayMs = 24 * 60 * 60 * 1000;
+
+const initialMedications = [
+  {
+    _id: '65f1b201a1b2c3d4e5f00201',
+    name: 'Paracetamol',
+    dosage: '500 mg',
+    frequency: 'Twice Daily',
+    times: ['08:00', '20:00'],
+    startDate: new Date(nowMs - 2 * dayMs).toISOString(),
+    endDate: new Date(nowMs + 3 * dayMs).toISOString(),
+    instructions: 'Take 1 tablet after meals with water.',
+    status: 'active',
+    patientName: 'Self',
+    patientId: null,
+    logs: [
+      {
+        date: new Date().toISOString().split('T')[0],
+        time: '08:00',
+        status: 'Taken',
+        recordedAt: new Date(nowMs - 4 * 60 * 60 * 1000),
+      },
+    ],
+    createdAt: new Date(nowMs - 2 * dayMs).toISOString(),
+    updatedAt: new Date(nowMs - 2 * dayMs).toISOString(),
+  },
+  {
+    _id: '65f1b201a1b2c3d4e5f00202',
+    name: 'Amoxicillin',
+    dosage: '250 mg',
+    frequency: 'Thrice Daily',
+    times: ['08:00', '14:00', '20:00'],
+    startDate: new Date(nowMs - 1 * dayMs).toISOString(),
+    endDate: new Date(nowMs + 5 * dayMs).toISOString(),
+    instructions: 'Complete full 5-day antibiotic course as advised.',
+    status: 'active',
+    patientName: 'Self',
+    patientId: null,
+    logs: [],
+    createdAt: new Date(nowMs - 1 * dayMs).toISOString(),
+    updatedAt: new Date(nowMs - 1 * dayMs).toISOString(),
+  },
+  {
+    _id: '65f1b201a1b2c3d4e5f00203',
+    name: 'Multivitamin & Zinc',
+    dosage: '1 Capsule',
+    frequency: 'Once Daily',
+    times: ['09:00'],
+    startDate: new Date(nowMs - 5 * dayMs).toISOString(),
+    endDate: new Date(nowMs + 25 * dayMs).toISOString(),
+    instructions: 'Take in the morning with a glass of water after breakfast.',
+    status: 'active',
+    patientName: 'Self',
+    patientId: null,
+    logs: [
+      {
+        date: new Date().toISOString().split('T')[0],
+        time: '09:00',
+        status: 'Taken',
+        recordedAt: new Date(nowMs - 3 * 60 * 60 * 1000),
+      },
+    ],
+    createdAt: new Date(nowMs - 5 * dayMs).toISOString(),
+    updatedAt: new Date(nowMs - 5 * dayMs).toISOString(),
+  },
+  {
+    _id: '65f1b201a1b2c3d4e5f00204',
+    name: 'Cetirizine',
+    dosage: '10 mg',
+    frequency: 'Once Daily',
+    times: ['21:00'],
+    startDate: new Date(nowMs - 10 * dayMs).toISOString(),
+    endDate: new Date(nowMs - 1 * dayMs).toISOString(),
+    instructions: 'Take at night before sleep for seasonal allergy relief.',
+    status: 'expired',
+    patientName: 'Self',
+    patientId: null,
+    logs: [],
+    createdAt: new Date(nowMs - 10 * dayMs).toISOString(),
+    updatedAt: new Date(nowMs - 1 * dayMs).toISOString(),
+  },
+];
+
+let inMemoryMedications = JSON.parse(JSON.stringify(initialMedications));
+
+const computeMedStatus = (med) => {
+  if (med.status === 'completed') return 'completed';
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(med.endDate);
+  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  if (today > endDay) {
+    return 'expired';
+  }
+  return 'active';
+};
 
 let ioInstance = null;
 
@@ -420,11 +519,164 @@ module.exports = {
     return inMemoryStaff.find((s) => s.role === cleanRole && s.isActive) || null;
   },
 
+  getMedications: async (filterOptions = {}) => {
+    const { status, search } = filterOptions;
+    const dbStatus = getDatabaseStatus();
+
+    if (dbStatus.isConnected) {
+      const query = {};
+      if (status && status !== 'all') {
+        query.status = status;
+      }
+      if (search && search.trim()) {
+        const regex = new RegExp(search.trim(), 'i');
+        query.$or = [{ name: regex }, { instructions: regex }];
+      }
+      const list = await Medication.find(query).sort({ createdAt: -1 }).lean();
+      return list.map((m) => ({ ...m, status: computeMedStatus(m) }));
+    }
+
+    let list = inMemoryMedications.map((m) => ({ ...m, status: computeMedStatus(m) }));
+
+    if (status && status !== 'all') {
+      list = list.filter((m) => m.status === status);
+    }
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (m) =>
+          (m.name && m.name.toLowerCase().includes(q)) ||
+          (m.instructions && m.instructions.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  },
+
+  getMedicationById: async (id) => {
+    const dbStatus = getDatabaseStatus();
+    if (dbStatus.isConnected) {
+      const med = await Medication.findById(id).lean();
+      if (!med) return null;
+      return { ...med, status: computeMedStatus(med) };
+    }
+    const found = inMemoryMedications.find((m) => String(m._id) === String(id));
+    if (!found) return null;
+    return { ...found, status: computeMedStatus(found) };
+  },
+
+  createMedication: async (data) => {
+    const dbStatus = getDatabaseStatus();
+    const calculated = computeMedStatus(data);
+    const payload = {
+      ...data,
+      status: data.status || calculated,
+      logs: data.logs || [],
+    };
+
+    if (dbStatus.isConnected) {
+      const doc = new Medication(payload);
+      const saved = await doc.save();
+      const obj = saved.toObject();
+      return { ...obj, status: computeMedStatus(obj) };
+    }
+
+    const newMed = {
+      _id: 'med_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+      ...payload,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    inMemoryMedications.unshift(newMed);
+    return newMed;
+  },
+
+  updateMedication: async (id, updateData) => {
+    const dbStatus = getDatabaseStatus();
+    if (dbStatus.isConnected) {
+      const updated = await Medication.findByIdAndUpdate(
+        id,
+        { ...updateData, updatedAt: new Date() },
+        { new: true, runValidators: true }
+      ).lean();
+      if (!updated) return null;
+      return { ...updated, status: computeMedStatus(updated) };
+    }
+
+    const index = inMemoryMedications.findIndex((m) => String(m._id) === String(id));
+    if (index === -1) return null;
+
+    inMemoryMedications[index] = {
+      ...inMemoryMedications[index],
+      ...updateData,
+      updatedAt: new Date().toISOString(),
+    };
+    inMemoryMedications[index].status = computeMedStatus(inMemoryMedications[index]);
+    return inMemoryMedications[index];
+  },
+
+  deleteMedication: async (id) => {
+    const dbStatus = getDatabaseStatus();
+    if (dbStatus.isConnected) {
+      const deleted = await Medication.findByIdAndDelete(id).lean();
+      return !!deleted;
+    }
+
+    const initialLen = inMemoryMedications.length;
+    inMemoryMedications = inMemoryMedications.filter((m) => String(m._id) !== String(id));
+    return inMemoryMedications.length < initialLen;
+  },
+
+  logMedicationDose: async (id, doseInfo) => {
+    const { date, time, status } = doseInfo;
+    const logEntry = {
+      date,
+      time,
+      status,
+      recordedAt: new Date().toISOString(),
+    };
+
+    const dbStatus = getDatabaseStatus();
+    if (dbStatus.isConnected) {
+      const med = await Medication.findById(id);
+      if (!med) return null;
+      if (!Array.isArray(med.logs)) {
+        med.logs = [];
+      }
+      const existingIdx = med.logs.findIndex((l) => l.date === date && l.time === time);
+      if (existingIdx >= 0) {
+        med.logs[existingIdx].status = status;
+        med.logs[existingIdx].recordedAt = new Date();
+      } else {
+        med.logs.push(logEntry);
+      }
+      const saved = await med.save();
+      const obj = saved.toObject();
+      return { ...obj, status: computeMedStatus(obj) };
+    }
+
+    const med = inMemoryMedications.find((m) => String(m._id) === String(id));
+    if (!med) return null;
+
+    if (!Array.isArray(med.logs)) {
+      med.logs = [];
+    }
+
+    const existingIdx = med.logs.findIndex((l) => l.date === date && l.time === time);
+    if (existingIdx >= 0) {
+      med.logs[existingIdx] = logEntry;
+    } else {
+      med.logs.push(logEntry);
+    }
+    med.updatedAt = new Date().toISOString();
+    return { ...med, status: computeMedStatus(med) };
+  },
+
   maskPatientName,
   resetMemoryStoreForTesting: () => {
     inMemoryPatients = JSON.parse(JSON.stringify(initialPatients));
     inMemoryPrescriptions = [];
     inMemoryStaff = JSON.parse(JSON.stringify(initialStaff));
+    inMemoryMedications = JSON.parse(JSON.stringify(initialMedications));
   },
 };
 

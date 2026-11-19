@@ -11,6 +11,8 @@ const translations = {
     navQueue: 'Live Queue Board',
     navReception: 'Reception Desk',
     navDoctor: 'Doctor Portal',
+    navChat: 'AI Health Chat',
+    navReminders: 'Medicine Reminder',
     navLogin: 'Staff Login',
     navLogout: 'Sign Out',
     langName: 'English',
@@ -79,6 +81,12 @@ export const ClinicProvider = ({ children }) => {
   const [patients, setPatients] = useState([]);
   const [publicQueue, setPublicQueue] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
+  const [medications, setMedications] = useState([]);
+  const [notificationPermission, setNotificationPermission] = useState(() => {
+    return typeof window !== 'undefined' && 'Notification' in window
+      ? Notification.permission
+      : 'default';
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
@@ -499,6 +507,182 @@ export const ClinicProvider = ({ children }) => {
     setSuccessMessage('Signed out successfully.');
   };
 
+  const requestNotificationPermission = async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        const perm = await Notification.requestPermission();
+        setNotificationPermission(perm);
+        if (perm === 'granted') {
+          setSuccessMessage('Browser notifications enabled for medicine reminders.');
+        } else {
+          setError('Browser notification permission was not granted.');
+        }
+        return perm;
+      } catch (err) {
+        console.warn('Notification permission error:', err);
+      }
+    }
+    return 'denied';
+  };
+
+  const fetchMedications = useCallback(async (filters = {}) => {
+    try {
+      const params = new URLSearchParams();
+      if (filters.status && filters.status !== 'all') params.append('status', filters.status);
+      if (filters.search) params.append('search', filters.search);
+
+      const url = `${BASE_URL}/medications${params.toString() ? '?' + params.toString() : ''}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          setMedications(json.data);
+        }
+      }
+    } catch (err) {
+      console.warn('Error fetching medications:', err.message);
+    }
+  }, []);
+
+  const addMedication = async (medData) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${BASE_URL}/medications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(medData),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to add medication');
+      }
+      setSuccessMessage('Medication schedule added successfully.');
+      await fetchMedications();
+      return { success: true, data: json.data };
+    } catch (err) {
+      setError(err.message);
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateMedication = async (id, updateData) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${BASE_URL}/medications/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to update medication');
+      }
+      setSuccessMessage('Medication updated successfully.');
+      await fetchMedications();
+      return { success: true, data: json.data };
+    } catch (err) {
+      setError(err.message);
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteMedication = async (id) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${BASE_URL}/medications/${id}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to delete medication');
+      }
+      setSuccessMessage('Medication removed from reminder schedule.');
+      await fetchMedications();
+      return { success: true };
+    } catch (err) {
+      setError(err.message);
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logMedicationDose = async (id, { date, time, status }) => {
+    try {
+      const res = await fetch(`${BASE_URL}/medications/${id}/dose`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, time, status }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to record dose');
+      }
+      setSuccessMessage(`Dose marked as ${status}.`);
+      await fetchMedications();
+      return { success: true, data: json.data };
+    } catch (err) {
+      setError(err.message);
+      return { success: false, error: err.message };
+    }
+  };
+
+  useEffect(() => {
+    fetchMedications();
+  }, [fetchMedications]);
+
+  useEffect(() => {
+    const notifiedMap = new Set();
+
+    const interval = setInterval(() => {
+      if (!medications || medications.length === 0) return;
+
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const currentTime = `${hours}:${minutes}`;
+      const todayStr = now.toISOString().split('T')[0];
+
+      medications.forEach((med) => {
+        if (med.status !== 'active') return;
+        if (!Array.isArray(med.times) || !med.times.includes(currentTime)) return;
+
+        const key = `${med._id}_${todayStr}_${currentTime}`;
+        if (notifiedMap.has(key)) return;
+
+        const alreadyLogged =
+          Array.isArray(med.logs) &&
+          med.logs.some((l) => l.date === todayStr && l.time === currentTime);
+        if (alreadyLogged) return;
+
+        notifiedMap.add(key);
+
+        if (
+          typeof window !== 'undefined' &&
+          'Notification' in window &&
+          Notification.permission === 'granted'
+        ) {
+          try {
+            new Notification(`Medicine Reminder: ${med.name}`, {
+              body: `Scheduled Dose: ${med.dosage} (${med.instructions || 'Take as advised'})`,
+              icon: '/favicon.ico',
+            });
+          } catch (e) {
+            console.warn('Browser notification error:', e);
+          }
+        }
+
+        setSuccessMessage(`🔔 Reminder: Time to take ${med.name} (${med.dosage})`);
+      });
+    }, 20000);
+
+    return () => clearInterval(interval);
+  }, [medications]);
+
   const stats = useMemo(() => {
     const listToCount = staffUser ? patients : publicQueue;
     const waitingList = listToCount.filter((p) => p.status === 'Waiting');
@@ -561,6 +745,14 @@ export const ClinicProvider = ({ children }) => {
         fetchPrescriptionHistory,
         loginStaff,
         logoutStaff,
+        medications,
+        fetchMedications,
+        addMedication,
+        updateMedication,
+        deleteMedication,
+        logMedicationDose,
+        notificationPermission,
+        requestNotificationPermission,
       }}
     >
       {children}

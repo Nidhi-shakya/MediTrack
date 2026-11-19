@@ -8,6 +8,8 @@ import { LiveQueuePage } from './pages/LiveQueuePage';
 import { ReceptionDashboard } from './pages/ReceptionDashboard';
 import { DoctorPortal } from './pages/DoctorPortal';
 import { LoginPage } from './pages/LoginPage';
+import { ChatbotPage } from './pages/ChatbotPage';
+import { MedicineReminderPage } from './pages/MedicineReminderPage';
 import { AlertCircle, CheckCircle2, X } from 'lucide-react';
 
 const AppShell = () => {
@@ -56,6 +58,10 @@ const AppShell = () => {
           <Route path="/" element={<BookingPage />} />
 
           <Route path="/queue" element={<LiveQueuePage />} />
+
+          <Route path="/chat" element={<ChatbotPage />} />
+
+          <Route path="/reminders" element={<MedicineReminderPage />} />
 
           <Route path="/login" element={<LoginPage />} />
 
